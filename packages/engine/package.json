@@ -1,0 +1,27 @@
+{
+  "name": "@michelepolo/git-swimlanes-engine",
+  "version": "0.0.0",
+  "description": "Platform-agnostic deterministic Git history visualizer (React component + webview bundle).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@michelepolo/git-swimlanes-contract": "*",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "tsup": "8.5.1",
+    "vitest": "4.1.8"
+  }
+}
