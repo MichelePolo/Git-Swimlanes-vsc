@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import * as vscode from "vscode";
 
 export function buildHtml(webview: vscode.Webview, root: vscode.Uri): string {
@@ -26,8 +27,7 @@ export function buildHtml(webview: vscode.Webview, root: vscode.Uri): string {
 }
 
 function makeNonce(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let out = "";
-  for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
+  // CSP nonce must be unpredictable: use a CSPRNG, not Math.random().
+  // 16 bytes → 128 bits of entropy, base64-encoded (CSP-safe charset).
+  return randomBytes(16).toString("base64");
 }
