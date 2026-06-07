@@ -1,0 +1,17 @@
+<idea-plugin>
+  <id>io.github.michelepolo.gitswimlanes</id>
+  <name>Git Swimlanes</name>
+  <vendor email="michele.polo@gmail.com">michelepolo</vendor>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>Git4Idea</depends>
+
+  <idea-version since-build="233"/>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="Git Swimlanes"
+                anchor="bottom"
+                icon="AllIcons.Vcs.Branch"
+                factoryClass="io.github.michelepolo.gitswimlanes.SwimlanesToolWindowFactory"/>
+  </extensions>
+</idea-plugin>

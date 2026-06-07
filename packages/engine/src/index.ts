@@ -1,0 +1,8 @@
+export { GitSwimlanes } from "./ui/GitSwimlanes.js";
+export type { GitSwimlanesProps } from "./ui/GitSwimlanes.js";
+export { parseLog } from "./model/parseLog.js";
+export { assignLanes } from "./model/assignLanes.js";
+export { detectPR } from "./model/detectPR.js";
+export { colorFor, hueFromName } from "./model/color.js";
+export { LAYOUT, laneX } from "./layout.js";
+export type * from "@michelepolo/git-swimlanes-contract";

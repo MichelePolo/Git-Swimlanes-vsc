@@ -1,0 +1,13 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Three swimlanes with commit nodes; uses currentColor so VS Code themes it. -->
+  <line x1="5" y1="3" x2="5" y2="21" stroke="currentColor" stroke-width="1.4" opacity="0.5"/>
+  <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" stroke-width="1.4" opacity="0.5"/>
+  <line x1="19" y1="3" x2="19" y2="21" stroke="currentColor" stroke-width="1.4" opacity="0.5"/>
+  <path d="M12 7 C12 10, 5 10, 5 13" stroke="currentColor" stroke-width="1.4" fill="none"/>
+  <path d="M12 11 C12 14, 19 14, 19 17" stroke="currentColor" stroke-width="1.4" fill="none"/>
+  <circle cx="5" cy="6" r="2.2" fill="currentColor"/>
+  <circle cx="12" cy="7" r="2.2" fill="currentColor"/>
+  <circle cx="5" cy="13" r="2.2" fill="currentColor"/>
+  <circle cx="12" cy="14" r="2.2" fill="currentColor"/>
+  <circle cx="19" cy="17" r="2.2" fill="currentColor"/>
+</svg>

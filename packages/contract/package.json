@@ -1,0 +1,17 @@
+{
+  "name": "@michelepolo/git-swimlanes-contract",
+  "version": "0.0.0",
+  "description": "Shared types: Git data model and host↔webview message contract.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "vitest": "4.1.8"
+  }
+}
