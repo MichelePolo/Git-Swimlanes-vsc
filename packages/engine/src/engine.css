@@ -1,0 +1,8 @@
+:root {
+  --bg: #0d1117; --panel: #11161f; --panel2: #0a0e14; --line: #222b38;
+  --txt: #c9d4e3; --dim: #6f7d92; --accent: #e8b04b;
+}
+.git-swimlanes {
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--txt); background: var(--bg);
+}

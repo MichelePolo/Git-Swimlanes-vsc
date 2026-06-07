@@ -13,6 +13,7 @@ export default defineConfig([
     entry: { engine: "src/webview.ts" },
     format: ["iife"],
     globalName: "GitSwimlanesBundle",
+    outExtension: () => ({ js: ".js" }), // override tsup's default ".global.js" for IIFE
     dts: false,
     sourcemap: true,
     clean: false,
