@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+packages/vscode/media/engine.js
+packages/vscode/media/engine.css
+intellij/src/main/resources/web/engine.js
+intellij/src/main/resources/web/engine.css
+
+# vscode extension package
+*.vsix
+
+# intellij / gradle
+intellij/.gradle/
+intellij/build/
+.idea/
+
+# os
+.DS_Store

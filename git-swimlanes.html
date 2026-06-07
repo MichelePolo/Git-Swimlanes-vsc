@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Swimlanes — history deterministica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#11161f; --panel2:#0a0e14; --line:#222b38;
+    --txt:#c9d4e3; --dim:#6f7d92; --accent:#e8b04b;
+    --rowH:46px; --laneW:28px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;line-height:1.5}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+
+  header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  header.top h1{font-size:20px;font-weight:700;letter-spacing:-.3px;margin:0}
+  header.top .sub{color:var(--dim);font-size:13px}
+
+  .toolbar{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;
+    margin:18px 0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .toolbar .col{display:flex;flex-direction:column;gap:8px;flex:1;min-width:260px}
+  label.lbl{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  textarea{width:100%;min-height:120px;resize:vertical;background:var(--panel2);
+    color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.5}
+  .cmd{display:flex;align-items:center;gap:8px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .cmd code{flex:1;font-size:12px;color:var(--accent);white-space:nowrap;overflow:auto}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{font-family:inherit;font-size:13px;cursor:pointer;border-radius:8px;
+    border:1px solid var(--line);background:var(--panel2);color:var(--txt);padding:8px 14px;
+    transition:border-color .15s,background .15s}
+  button:hover{border-color:#3a4759}
+  button.primary{background:var(--accent);color:#1a1205;border-color:var(--accent);font-weight:600}
+  button.primary:hover{filter:brightness(1.07)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 2px 10px}
+  .legend .item{display:flex;align-items:center;gap:7px;font-size:13px}
+  .legend .chip{width:13px;height:13px;border-radius:3px;flex:none}
+  .legend .lane{color:var(--dim);font-size:11px}
+
+  /* symbol legend */
+  .symlegend{margin:8px 0 4px;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+  .symlegend>summary{cursor:pointer;padding:11px 14px;font-size:12px;color:var(--dim);
+    text-transform:uppercase;letter-spacing:.08em;user-select:none;list-style:none;outline:none}
+  .symlegend>summary::-webkit-details-marker{display:none}
+  .symlegend>summary::before{content:"▸";color:var(--accent);margin-right:8px;display:inline-block}
+  .symlegend[open]>summary::before{content:"▾"}
+  .symgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+    gap:11px 20px;padding:4px 16px 16px}
+  .symrow{display:flex;align-items:center;gap:11px;font-size:12.5px;line-height:1.35}
+  .symrow .gly{flex:none;min-width:66px;display:flex;align-items:center;justify-content:flex-start}
+  .symrow .desc b{color:#fff;font-weight:600}
+  .symrow .pill{cursor:default}
+
+  /* graph */
+  .scroll{border:1px solid var(--line);border-radius:10px;overflow:auto;
+    max-height:560px;background:var(--panel)}
+  .head{position:sticky;top:0;z-index:5;display:flex;
+    background:linear-gradient(180deg,#11161f 75%,rgba(17,22,31,0));backdrop-filter:blur(2px);
+    border-bottom:1px solid var(--line)}
+  .head .gh{position:relative;height:104px;flex:none}
+  .head .lh{flex:1;display:flex;align-items:flex-end;padding:0 14px 10px;
+    font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .laneLabel{position:absolute;bottom:8px;transform-origin:left bottom;
+    transform:rotate(-45deg);white-space:nowrap;font-size:12px;font-weight:600;
+    font-family:"IBM Plex Mono",monospace}
+  .laneTick{position:absolute;bottom:0;width:2px;height:7px;border-radius:1px}
+
+  .body{display:flex;align-items:stretch}
+  .body svg{flex:none;display:block}
+  .rows{flex:1;min-width:440px}
+  .cwrap{border-bottom:1px solid rgba(34,43,56,.55);overflow:hidden}
+  .cwrap:nth-child(odd){background:rgba(255,255,255,.012)}
+  .crow{display:flex;align-items:center;gap:9px;padding:0 14px;cursor:pointer;
+    transition:background .12s}
+  .crow:hover{background:rgba(232,176,75,.07)}
+  .crow.open{background:rgba(120,150,255,.07)}
+  .crow .caret{flex:none;width:12px;color:var(--dim);font-size:10px}
+  .crow.open .caret{color:#a9b9ff}
+  .crow .hash{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--dim);flex:none;width:58px}
+  .crow .subj{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow .fcount{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--dim);
+    border:1px solid var(--line);border-radius:6px;padding:0 6px}
+  .crow .who{color:var(--dim);font-size:12px;flex:none;white-space:nowrap}
+
+  .files{background:var(--panel2);border-top:1px solid var(--line);
+    overflow:auto;padding:8px 14px 8px 34px}
+  .frow{display:flex;align-items:center;gap:10px;height:24px;cursor:pointer;border-radius:5px;
+    margin:0 -6px;padding:0 6px}
+  .frow:hover{background:rgba(120,150,255,.10)}
+  .frow .fopen{margin-left:auto;flex:none;font-size:11px;color:var(--dim);opacity:0;transition:opacity .12s}
+  .frow:hover .fopen{opacity:1}
+  .fbadge{flex:none;width:34px;text-align:center;font-family:"IBM Plex Mono",monospace;
+    font-size:10.5px;font-weight:600;border:1px solid;border-radius:5px;padding:1px 0}
+  .fpath{font-size:12.5px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fpath .arr{color:var(--dim)}
+  .fempty{font-size:12.5px;color:var(--dim);line-height:1.5;padding:4px 0}
+
+  .pill{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;
+    padding:1px 7px;border-radius:999px;flex:none;white-space:nowrap}
+  .pill.branch{color:#0c1016}
+  .pill.tag{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+  .pill.pr{background:rgba(120,150,255,.14);border:1px solid #7b93ff;color:#a9b9ff;font-weight:600}
+  .pill.pr.squash{border-style:dashed}
+  .pill.head{outline:2px solid #fff3;outline-offset:1px}
+
+  /* diff modal */
+  .diffmodal{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+    background:rgba(3,6,11,.66);backdrop-filter:blur(2px);padding:24px}
+  .diffmodal[hidden]{display:none}
+  .diffcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    width:min(920px,100%);max-height:82vh;display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.55)}
+  .diffhead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .diffhead #diffTitle{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .diffhead button{flex:none;border:1px solid var(--line);background:var(--panel2);color:var(--txt);
+    border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:13px}
+  .diffhead button:hover{border-color:#3a4759}
+  .diffbody{overflow:auto;padding:8px 0;font-size:12.5px;line-height:1.55}
+  .dline{display:block;white-space:pre;padding:0 16px}
+  .dline.add{background:rgba(95,199,127,.13);color:#a7e3ba}
+  .dline.del{background:rgba(224,108,117,.13);color:#f0a8ad}
+  .dline.hunk{color:#7b93ff;background:rgba(120,150,255,.08)}
+  .dline.meta{color:var(--dim)}
+  .dnote{padding:18px;color:var(--dim);line-height:1.65}
+
+  footer.note{color:var(--dim);font-size:12.5px;margin-top:16px;line-height:1.65}
+  footer.note b{color:var(--txt);font-weight:600}
+  .copied{color:#62d68a !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 class="mono">git&nbsp;swimlanes</h1>
+    <span class="sub">colori deterministici per nome · ogni colonna = un branch, etichettato</span>
+  </header>
+
+  <div class="toolbar">
+    <div class="col">
+      <label class="lbl" for="input">Incolla l'output di git log</label>
+      <textarea id="input" spellcheck="false" placeholder="hash|parents|refs|author|date|subject ..."></textarea>
+      <div class="cmd">
+        <code class="mono" id="gitcmd">git --no-pager -c core.quotepath=false log --all --date-order --name-status --pretty=format:"%H|%P|%D|%an|%ad|%s" --date=short > git-history.txt</code>
+        <button id="copy">copia</button>
+      </div>
+    </div>
+    <div class="col" style="flex:0 0 auto;min-width:170px">
+      <label class="lbl">Azioni</label>
+      <div class="btns">
+        <button class="primary" id="render">Disegna ↵</button>
+        <button id="sample">Carica esempio</button>
+      </div>
+      <span class="lane" style="color:var(--dim);font-size:12px">Funziona offline, in locale, senza inviare nulla.</span>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <details class="symlegend">
+    <summary>Legenda dei simboli</summary>
+    <div class="symgrid">
+      <div class="symrow">
+        <span class="gly"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="6" fill="hsl(140 68% 60%)" stroke="#0d1117" stroke-width="2"/></svg></span>
+        <span class="desc"><b>Commit</b> normale — un solo parent</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="7.5" fill="hsl(210 68% 60%)" stroke="#0d1117" stroke-width="2"/><circle cx="11" cy="11" r="2.7" fill="#0d1117"/></svg></span>
+        <span class="desc"><b>Ciambella</b> — merge commit (2+ parent)</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><svg width="24" height="22" viewBox="0 0 24 22"><circle cx="12" cy="11" r="9.5" fill="none" stroke="#7b93ff" stroke-width="1.6"/><circle cx="12" cy="11" r="6" fill="hsl(210 68% 60%)" stroke="#0d1117" stroke-width="2"/></svg></span>
+        <span class="desc"><b>Alone azzurro</b> — nodo di una PR rilevata</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><svg width="22" height="22" viewBox="0 0 22 22"><line x1="11" y1="1" x2="11" y2="21" stroke="hsl(140 68% 60%)" stroke-width="2"/></svg></span>
+        <span class="desc"><b>Linea verticale</b> — first-parent; colore = ramo del <i>figlio</i></span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M5 1 C 5 11, 17 11, 17 21" fill="none" stroke="hsl(28 75% 60%)" stroke-width="2"/></svg></span>
+        <span class="desc"><b>Arco</b> — merge o nascita di un branch; colore = ramo collegato</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><svg width="22" height="22" viewBox="0 0 22 22"><line x1="11" y1="1" x2="11" y2="21" stroke="hsl(140 68% 60%)" stroke-width="2" opacity="0.2"/></svg></span>
+        <span class="desc"><b>Guida tenue</b> — la colonna (corsia) di quel ramo</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><span class="pill branch" style="background:hsl(140 68% 60%)">main</span></span>
+        <span class="desc"><b>Pillola colorata</b> — tip del branch: dove punta <i>ora</i> il ref</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><span class="pill branch head" style="background:hsl(140 68% 60%)">main</span></span>
+        <span class="desc"><b>Pillola con bordo bianco</b> — branch su cui è posizionato HEAD</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><span class="pill tag">⌑ v1.2</span></span>
+        <span class="desc"><b>Pillola con bordo oro</b> — tag</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><span class="pill pr">⇲ PR #42</span></span>
+        <span class="desc"><b>Pillola PR</b> — PR via merge commit</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><span class="pill pr squash">⇲ PR #42</span></span>
+        <span class="desc"><b>Pillola PR tratteggiata</b> — PR via squash</span>
+      </div>
+      <div class="symrow">
+        <span class="gly" style="transform:rotate(-45deg);color:hsl(140 68% 60%);font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px">main</span>
+        <span class="desc"><b>Etichetta in testata (ruotata)</b> — nome del ramo della colonna</span>
+      </div>
+      <div class="symrow">
+        <span class="gly"><span class="fcount" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:0 6px">⊞ 3</span></span>
+        <span class="desc"><b>Contatore</b> — n. di file nel commit; clicca la riga per aprirli</span>
+      </div>
+      <div class="symrow">
+        <span class="gly" style="gap:3px">
+          <span class="fbadge" style="color:#5fc77f;border-color:#5fc77f">A</span>
+        </span>
+        <span class="desc"><b>A / M / D / R</b> — file aggiunto / modificato / eliminato / rinominato</span>
+      </div>
+    </div>
+  </details>
+
+  <div class="scroll">
+    <div class="head">
+      <div class="gh" id="laneHeads"></div>
+      <div class="lh">commit</div>
+    </div>
+    <div class="body">
+      <svg id="graph" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="rows" id="rows"></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    <b>Perché funziona.</b> Git memorizza il nome del branch <i>solo</i> sul suo tip (il ref): i commit storici non sanno a quale ramo appartengono.
+    Qui ogni branch reclama la propria corsia risalendo la catena del <b>first-parent</b> dal suo tip — l'euristica standard, resa <b>stabile</b>: una corsia fissa per ramo, con etichetta.
+    Il <b>colore deriva solo dal nome</b> (hash → tonalità): lo stesso branch ha sempre lo stesso colore, in ogni repo e ad ogni apertura. I merge sono dischi a ciambella; le pillole mostrano dove si trova ora ogni ref.
+    <br><br>
+    <b>PR rilevate dal messaggio.</b> Una PR non è un oggetto Git: la cerco nei messaggi di commit (<span class="mono">⇲ PR #id</span>, alone azzurro sul nodo). Riconosco <span class="mono">Merged PR &lt;id&gt;:</span> (Azure DevOps), <span class="mono">Merge pull request #&lt;id&gt;</span> (GitHub), <span class="mono">!&lt;id&gt;</span> (GitLab), il suffisso <span class="mono">(#&lt;id&gt;)</span> degli squash. Bordo tratteggiato = squash. Se il team usa il <b>rebase</b> in completamento PR, la PR sparisce del tutto dalla history: nessuna traccia, serve l'API della forge.
+    <br><br>
+    <b>File modificati.</b> <b>Clicca una riga</b> per aprire/chiudere l'elenco dei file (il grafo si allarga sotto al nodo, le corsie restano allineate); <b>clicca un file</b> per aprirne il <b>diff</b>. Servono i dati di <span class="mono">--name-status</span> nel log: il comando suggerito li include già. Il diff vero arriva dal tuo host via <span class="mono">git show &lt;hash&gt; -- &lt;file&gt;</span>. I <b>merge</b> non mostrano file di default — è Git, non un limite della vista.
+  </footer>
+</div>
+
+<div id="diffModal" class="diffmodal" hidden>
+  <div class="diffcard">
+    <div class="diffhead">
+      <span id="diffTitle" class="mono"></span>
+      <button id="diffClose" title="Chiudi (Esc)">✕</button>
+    </div>
+    <div id="diffBody" class="diffbody mono"></div>
+  </div>
+</div>
+
+<script>
+const SAMPLE = `m3|m2 d3|HEAD -> main, tag: v1.2|alice|2024-01-18|Merged PR 1042: Release 1.2 (develop -> main)
+d3|m1|develop|carla|2024-01-16|perf tuning del layer di cache
+M\tsrc/main/java/com/acme/cache/CacheConfig.java
+M\tsrc/main/resources/application.yml
+D\tsrc/main/resources/legacy-cache.properties
+m2|a3 h1||alice|2024-01-14|Merged PR 1041: Hotfix NPE all'avvio
+h1|a3|hotfix/startup-npe|dan|2024-01-13|fix NPE all'avvio quando config manca
+M\tsrc/main/java/com/acme/StartupRunner.java
+A\tsrc/test/java/com/acme/StartupRunnerTest.java
+m1|d2 f2||carla|2024-01-12|Merged PR 1039: feature/login
+d2|d1||carla|2024-01-11|Merged PR 1038: setup pipeline CI (squash)
+A\tazure-pipelines.yml
+M\tREADME.md
+f2|f1|feature/login|bob|2024-01-10|validazione credenziali login
+R100\tsrc/main/java/com/acme/auth/Login.java\tsrc/main/java/com/acme/auth/LoginService.java
+A\tsrc/main/java/com/acme/auth/LoginValidator.java
+A\tsrc/test/java/com/acme/auth/LoginServiceTest.java
+a3|a2||alice|2024-01-09|aggiorna README
+M\tREADME.md
+f1|d1||bob|2024-01-08|form di login iniziale
+A\tsrc/main/java/com/acme/auth/LoginController.java
+A\tsrc/main/resources/templates/login.html
+d1|a2||carla|2024-01-05|setup ambiente di sviluppo
+A\tdocker-compose.yml
+A\t.env.example
+a2|a1||alice|2024-01-03|configurazione build
+A\tpom.xml
+a1|||alice|2024-01-02|init repository
+A\t.gitignore
+A\tREADME.md`;
+
+// Map a git --name-status code to {letter, label, color}
+function fileStatus(code){
+  const k=code[0];
+  switch(k){
+    case 'A': return {k:'A', label:'aggiunto',    color:'#5fc77f'};
+    case 'M': return {k:'M', label:'modificato',  color:'#e8b04b'};
+    case 'D': return {k:'D', label:'eliminato',   color:'#e06c75'};
+    case 'R': return {k:'R', label:'rinominato',  color:'#b48ead'};
+    case 'C': return {k:'C', label:'copiato',     color:'#56b6c2'};
+    case 'T': return {k:'T', label:'tipo file',   color:'#8a96a8'};
+    default:  return {k:k||'?', label:'modifica', color:'#8a96a8'};
+  }
+}
+
+// Demo diffs, keyed `${hash}::${path}`. In a real host these come from
+// `git show <hash> -- <path>` via the onRequestDiff() hook (see spec).
+const SAMPLE_DIFFS = {
+  "f1::src/main/java/com/acme/auth/LoginController.java":
+`diff --git a/src/main/java/com/acme/auth/LoginController.java b/src/main/java/com/acme/auth/LoginController.java
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/main/java/com/acme/auth/LoginController.java
+@@ -0,0 +1,9 @@
++package com.acme.auth;
++
++@RestController
++@RequestMapping("/api/login")
++public class LoginController {
++    @PostMapping
++    public ResponseEntity<Void> login(@RequestBody Credentials c) {
++        return ResponseEntity.ok().build();
++    }
++}`,
+  "d3::src/main/java/com/acme/cache/CacheConfig.java":
+`diff --git a/src/main/java/com/acme/cache/CacheConfig.java b/src/main/java/com/acme/cache/CacheConfig.java
+index 7f3a9c1..b2e8d40 100644
+--- a/src/main/java/com/acme/cache/CacheConfig.java
++++ b/src/main/java/com/acme/cache/CacheConfig.java
+@@ -12,8 +12,9 @@ public class CacheConfig {
+     @Bean
+     public CacheManager cacheManager() {
+-        return new ConcurrentMapCacheManager("orders");
++        var mgr = new CaffeineCacheManager("orders");
++        mgr.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(10)));
++        return mgr;
+     }
+ }`,
+  "f2::src/main/java/com/acme/auth/LoginService.java":
+`diff --git a/src/main/java/com/acme/auth/Login.java b/src/main/java/com/acme/auth/LoginService.java
+similarity index 100%
+rename from src/main/java/com/acme/auth/Login.java
+rename to src/main/java/com/acme/auth/LoginService.java`
+};
+
+function classifyDiffLine(l){
+  if(l.startsWith('@@')) return 'hunk';
+  if(l.startsWith('+++')||l.startsWith('---')||l.startsWith('diff ')||
+     l.startsWith('index ')||l.startsWith('new file')||l.startsWith('deleted file')||
+     l.startsWith('similarity')||l.startsWith('rename ')) return 'meta';
+  if(l.startsWith('+')) return 'add';
+  if(l.startsWith('-')) return 'del';
+  return 'ctx';
+}
+
+function openDiff(hash, path){
+  const modal=document.getElementById('diffModal');
+  const c=MODEL && MODEL.byHash[hash];
+  const f=c && c.files.find(x=>x.path===path);
+  const st=f?fileStatus(f.code):{label:''};
+  document.getElementById('diffTitle').innerHTML=
+    `<span style="color:${f?fileStatus(f.code).color:'#fff'}">[${esc(f?f.code:'?')}]</span> ${esc(path)} `+
+    `<span style="color:var(--dim)">· ${esc(hash.slice(0,7))}</span>`;
+  const text=SAMPLE_DIFFS[`${hash}::${path}`];
+  const body=document.getElementById('diffBody');
+  if(text){
+    body.innerHTML=text.split('\n').map(l=>
+      `<span class="dline ${classifyDiffLine(l)}">${esc(l)||' '}</span>`).join('');
+  }else{
+    body.innerHTML=`<div class="dnote">Diff non incluso in questi dati di esempio.<br><br>
+      Nel tuo host, aggancia <span class="mono">onRequestDiff(hash, path)</span> ed esegui sul backend:
+      <br><br><span class="mono" style="color:var(--accent)">git show ${esc(hash.slice(0,7))} -- ${esc(path)}</span><br><br>
+      restituendo il testo del diff unificato a questo viewer.</div>`;
+  }
+  modal.hidden=false;
+}
+function closeDiff(){ document.getElementById('diffModal').hidden=true; }
+
+// PR / MR detection from the commit subject — pure heuristics on message text.
+// A PR is NOT a git object: these patterns are the traces each forge leaves behind.
+function detectPR(subject){
+  let m;
+  if(m=subject.match(/^Merged PR (\d+)/i))            return {id:m[1], src:'Azure DevOps'};
+  if(m=subject.match(/Merge pull request #(\d+)/i))   return {id:m[1], src:'GitHub'};
+  if(m=subject.match(/\bpull request #(\d+)/i))       return {id:m[1], src:'Bitbucket'};
+  if(m=subject.match(/merge request[^!]*!(\d+)/i))    return {id:m[1], src:'GitLab'};
+  if(m=subject.match(/\(#(\d+)\)\s*$/))               return {id:m[1], src:'squash'}; // GitHub/GitLab squash suffix
+  return null;
+}
+
+const LP=16, laneW=28, RP=10, rowH=46, dotR=6, mergeR=7.5;
+const laneX = i => LP + i*laneW + laneW/2;
+
+function hueFromName(name){
+  let h=0; for(const ch of name) h=(h*31 + ch.charCodeAt(0))>>>0;
+  return h%360;
+}
+function colorFor(name){
+  if(name==='(no branch ref)') return 'hsl(215 10% 50%)';
+  return `hsl(${hueFromName(name)} 68% 60%)`;
+}
+function priority(name){
+  if(name==='main'||name==='master') return [0,name];
+  if(name==='develop'||name==='dev') return [1,name];
+  return [2,name];
+}
+
+function parseLog(text){
+  const commits=[]; const byHash={};
+  let current=null;
+  text.replace(/\r/g,'').split('\n').forEach(line=>{
+    if(!line.trim()) return;
+    // file-change line: STATUS<TAB>path  (rename/copy: R100<TAB>old<TAB>new)
+    if(/^[ACDMRTUXB]\d*\t/.test(line)){
+      if(!current) return;
+      const parts=line.split('\t');
+      const code=parts[0];
+      const file = (code[0]==='R'||code[0]==='C')
+        ? {code, path:parts[2]||parts[1], old:parts[1]}
+        : {code, path:parts[1]};
+      current.files.push(file);
+      return;
+    }
+    if(!line.includes('|')) return;               // ignore anything else
+    // commit header line
+    const [hash, parents='', refs='', author='', date='', ...rest]=line.split('|');
+    const c={
+      hash:hash.trim(),
+      parents:parents.trim()?parents.trim().split(/\s+/):[],
+      author:author.trim(), date:date.trim(), subject:rest.join('|').trim(),
+      branches:[], tags:[], head:false, files:[]
+    };
+    (refs||'').split(',').forEach(r=>{
+      r=r.trim(); if(!r) return;
+      if(r.startsWith('tag: ')) c.tags.push(r.slice(5).trim());
+      else if(r.includes('HEAD -> ')){ c.head=true; c.branches.push(r.split('->')[1].trim()); }
+      else if(r==='HEAD'){ c.head=true; }
+      else c.branches.push(r);
+    });
+    commits.push(c); byHash[c.hash]=c; current=c;
+  });
+  return {commits, byHash};
+}
+
+function build(text){
+  const {commits, byHash} = parseLog(text);
+  if(!commits.length) return null;
+
+  // --- collect branch tips, dedup remote/local by base name (prefer local) ---
+  const tips={};                    // baseName -> {name, tip}
+  commits.forEach(c=>{
+    c.branches.forEach(b=>{
+      const base=b.replace(/^[^/]+\//, m=> m); // keep full; only strip "origin/"
+      const norm=b.replace(/^origin\//,'');
+      if(!(norm in tips)) tips[norm]={name:norm, tip:c.hash, remote:b!==norm};
+      else if(tips[norm].remote && b===norm) tips[norm]={name:norm, tip:c.hash, remote:false};
+    });
+  });
+  let branches=Object.values(tips);
+  branches.sort((a,b)=>{const pa=priority(a.name),pb=priority(b.name);
+    return pa[0]-pb[0] || (pa[1]<pb[1]?-1:pa[1]>pb[1]?1:0);});
+
+  // --- claim lanes by first-parent walk from each tip, in priority order ---
+  const laneOf={}, branchOf={};
+  branches.forEach((b,laneIdx)=>{
+    let cur=b.tip;
+    while(cur && byHash[cur] && laneOf[cur]===undefined){
+      laneOf[cur]=laneIdx; branchOf[cur]=b.name;
+      cur=byHash[cur].parents[0];
+    }
+  });
+
+  // --- fallback lane for commits no ref reaches via first-parent ---
+  let extraLane=null;
+  commits.forEach(c=>{
+    if(laneOf[c.hash]===undefined){
+      if(extraLane===null) extraLane=branches.length;
+      laneOf[c.hash]=extraLane; branchOf[c.hash]='(no branch ref)';
+    }
+  });
+  const laneNames = branches.map(b=>b.name);
+  if(extraLane!==null) laneNames.push('(no branch ref)');
+  const nLanes=laneNames.length;
+
+  const rowOf={}; commits.forEach((c,i)=>rowOf[c.hash]=i);
+  const graphW = LP + nLanes*laneW + RP;
+
+  return {commits, byHash, laneOf, branchOf, laneNames, nLanes, rowOf, graphW};
+}
+
+let MODEL=null;
+const EXPANDED=new Set();
+
+// height of the file panel for a commit when expanded (deterministic → keeps SVG aligned)
+const PANEL = {lineH:24, padV:18, cap:250};
+function panelHeight(c){
+  const n = Math.max(c.files.length, 1);
+  return Math.min(PANEL.padV + n*PANEL.lineH, PANEL.cap);
+}
+
+function render(text){
+  MODEL = build(text);
+  EXPANDED.clear();
+  const legend=document.getElementById('legend');
+  const heads=document.getElementById('laneHeads');
+  const rows=document.getElementById('rows');
+  legend.innerHTML=heads.innerHTML='';
+  if(!MODEL){
+    document.getElementById('graph').innerHTML='';
+    rows.innerHTML='<div class="crow" style="color:var(--dim)">Nessun commit. Incolla l\'output di git log o carica l\'esempio.</div>';
+    return;
+  }
+  // color legend (branches)
+  MODEL.laneNames.forEach((name,i)=>{
+    legend.insertAdjacentHTML('beforeend',
+      `<span class="item"><span class="chip" style="background:${colorFor(name)}"></span>
+       <span class="mono">${esc(name)}</span><span class="lane">corsia ${i}</span></span>`);
+  });
+  // lane headers (rotated labels + ticks)
+  heads.style.width=MODEL.graphW+'px';
+  MODEL.laneNames.forEach((name,i)=>{
+    const x=laneX(i), c=colorFor(name);
+    const short = name.length>18 ? name.slice(0,17)+'…' : name;
+    heads.insertAdjacentHTML('beforeend',
+      `<span class="laneTick" style="left:${x-1}px;background:${c}"></span>
+       <span class="laneLabel" style="left:${x}px;color:${c}">${esc(short)}</span>`);
+  });
+  layout();
+}
+
+// Computes vertical offsets from expansion state, then draws SVG + rows.
+function layout(){
+  const m=MODEL; if(!m) return;
+  const svg=document.getElementById('graph');
+  const rows=document.getElementById('rows');
+
+  // per-row top offset and dot centre (dot lives in the top rowH band of each row)
+  const top=[]; let y=0;
+  m.commits.forEach(c=>{ top.push(y); y += rowH + (EXPANDED.has(c.hash)?panelHeight(c):0); });
+  const totalH=y;
+  const dotY = i => top[i] + rowH/2;
+
+  // ---- SVG ----
+  svg.setAttribute('width', m.graphW);
+  svg.setAttribute('height', totalH);
+  let s='';
+  m.laneNames.forEach((name,i)=>{
+    s+=`<line x1="${laneX(i)}" y1="0" x2="${laneX(i)}" y2="${totalH}" stroke="${colorFor(name)}" stroke-width="1" opacity="0.07"/>`;
+  });
+  m.commits.forEach(c=>{
+    const cx=laneX(m.laneOf[c.hash]), cy=dotY(m.rowOf[c.hash]);
+    c.parents.forEach((p,idx)=>{
+      if(!(p in m.byHash)) return;
+      const px=laneX(m.laneOf[p]), py=dotY(m.rowOf[p]);
+      const col = idx===0 ? colorFor(m.branchOf[c.hash]) : colorFor(m.branchOf[p]);
+      if(cx===px) s+=`<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="${col}" stroke-width="2"/>`;
+      else{ const my=(cy+py)/2;
+        s+=`<path d="M ${cx} ${cy} C ${cx} ${my}, ${px} ${my}, ${px} ${py}" fill="none" stroke="${col}" stroke-width="2"/>`; }
+    });
+  });
+  m.commits.forEach(c=>{
+    const x=laneX(m.laneOf[c.hash]), yy=dotY(m.rowOf[c.hash]);
+    const col=colorFor(m.branchOf[c.hash]);
+    if(detectPR(c.subject||'')) s+=`<circle cx="${x}" cy="${yy}" r="11" fill="none" stroke="#7b93ff" stroke-width="1.6" opacity="0.9"/>`;
+    if(c.parents.length>=2){
+      s+=`<circle cx="${x}" cy="${yy}" r="${mergeR}" fill="${col}" stroke="var(--bg)" stroke-width="2"/>`;
+      s+=`<circle cx="${x}" cy="${yy}" r="2.6" fill="var(--bg)"/>`;
+    }else s+=`<circle cx="${x}" cy="${yy}" r="${dotR}" fill="${col}" stroke="var(--bg)" stroke-width="2"/>`;
+  });
+  svg.innerHTML=s;
+
+  // ---- rows + accordions ----
+  let html='';
+  m.commits.forEach(c=>{
+    const open=EXPANDED.has(c.hash);
+    let pills='';
+    c.branches.forEach(b=>{
+      const norm=b.replace(/^origin\//,'');
+      pills+=`<span class="pill branch ${c.head&&c.branches.indexOf(b)===0?'head':''}" style="background:${colorFor(norm)}">${esc(b)}</span>`;
+    });
+    c.tags.forEach(t=> pills+=`<span class="pill tag">⌑ ${esc(t)}</span>`);
+    const pr=detectPR(c.subject||'');
+    if(pr) pills=`<span class="pill pr ${pr.src==='squash'?'squash':''}" title="PR rilevata via messaggio (${pr.src})">⇲ PR #${pr.id}</span>`+pills;
+    const nf=c.files.length;
+    const count = nf ? `<span class="fcount">⊞ ${nf}</span>` : '';
+
+    html+=`<div class="cwrap" style="height:${rowH+(open?panelHeight(c):0)}px">
+      <div class="crow${open?' open':''}" data-hash="${esc(c.hash)}" style="height:${rowH}px">
+        <span class="caret">${open?'▾':'▸'}</span>
+        <span class="hash">${esc(c.hash.slice(0,7))}</span>
+        ${pills}
+        <span class="subj">${esc(c.subject||'—')}</span>
+        ${count}
+        <span class="who">${esc(c.author)} · ${esc(c.date)}</span>
+      </div>`;
+    if(open) html+=`<div class="files" style="height:${panelHeight(c)}px">${filesHtml(c)}</div>`;
+    html+=`</div>`;
+  });
+  rows.innerHTML=html;
+}
+
+function filesHtml(c){
+  if(!c.files.length)
+    return `<div class="fempty">Nessun file elencato. Se è un <b>merge</b>, Git non mostra il diff di default; rigenera il log con <span class="mono">--name-status</span> (e per i merge aggiungi <span class="mono">-m --first-parent</span>).</div>`;
+  return c.files.map(f=>{
+    const st=fileStatus(f.code);
+    const name = f.old ? `${esc(f.old)} <span class="arr">→</span> ${esc(f.path)}` : esc(f.path);
+    return `<div class="frow" data-hash="${esc(c.hash)}" data-path="${esc(f.path)}" title="apri diff">
+      <span class="fbadge" style="color:${st.color};border-color:${st.color}" title="${st.label}">${esc(f.code)}</span>
+      <span class="fpath mono">${name}</span>
+      <span class="fopen">diff ›</span>
+    </div>`;
+  }).join('');
+}
+
+function esc(s){return (s||'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
+
+// wiring
+const input=document.getElementById('input');
+document.getElementById('render').onclick=()=>render(input.value);
+document.getElementById('sample').onclick=()=>{input.value=SAMPLE; render(SAMPLE);};
+document.getElementById('rows').addEventListener('click',e=>{
+  const frow=e.target.closest('.frow');
+  if(frow){ openDiff(frow.dataset.hash, frow.dataset.path); return; }
+  const row=e.target.closest('.crow'); if(!row) return;
+  const h=row.dataset.hash; if(!h) return;
+  EXPANDED.has(h)?EXPANDED.delete(h):EXPANDED.add(h);
+  layout();
+});
+document.getElementById('diffClose').onclick=closeDiff;
+document.getElementById('diffModal').addEventListener('click',e=>{
+  if(e.target.id==='diffModal') closeDiff();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDiff(); });
+document.getElementById('copy').onclick=function(){
+  navigator.clipboard.writeText(document.getElementById('gitcmd').textContent).then(()=>{
+    this.textContent='copiato ✓'; this.classList.add('copied');
+    setTimeout(()=>{this.textContent='copia'; this.classList.remove('copied');},1400);
+  });
+};
+input.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter') render(input.value); });
+
+input.value=SAMPLE;
+render(SAMPLE);
+</script>
+</body>
+</html>
