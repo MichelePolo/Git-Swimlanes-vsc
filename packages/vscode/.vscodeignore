@@ -1,0 +1,9 @@
+# Source and build config — ship only dist/ + media/ + manifest.
+src/**
+tsconfig.json
+tsup.config.ts
+**/*.map
+**/*.ts
+node_modules/**
+
+# Keep: dist/extension.js, media/ (icon.svg, bridge.js, engine.js, engine.css), package.json
