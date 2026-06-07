@@ -1,0 +1,76 @@
+// ─── Git data model (engine spec §2.2) ───────────────────────────────────────
+
+/** File status code from `git --name-status` (R/C carry a similarity score). */
+export type FileStatusCode =
+  | "A" | "M" | "D" | "T" | "U" | "B"
+  | `R${number}` | `C${number}`;
+
+export interface FileChange {
+  code: FileStatusCode;
+  path: string;
+  old?: string; // previous path, only for R/C
+}
+
+/** A parsed commit — node of the DAG. */
+export interface CommitNode {
+  hash: string;
+  parents: string[]; // parents[0] = first-parent
+  author: string;
+  date: string; // ISO short, e.g. "2024-01-18"
+  subject: string;
+  branches: string[];
+  tags: string[];
+  head: boolean;
+  files: FileChange[];
+}
+
+/** Result of the topological computation (independent of UI expansion). */
+export interface LaneModel {
+  commits: CommitNode[];
+  byHash: Record<string, CommitNode>;
+  laneOf: Record<string, number>;
+  branchOf: Record<string, string>;
+  laneNames: string[];
+  nLanes: number;
+  rowOf: Record<string, number>;
+  graphW: number;
+}
+
+export interface DiffRequest { hash: string; path: string; oldPath?: string; }
+export interface DiffResult { unified: string; }
+
+export interface PullRequestRef {
+  id: string;
+  src: "Azure DevOps" | "GitHub" | "GitLab" | "Bitbucket" | "squash";
+}
+
+/** Theme overrides (engine spec §8). laneSaturation/laneLightness drive lane colors. */
+export interface Theme {
+  bg?: string; panel?: string; panel2?: string; line?: string;
+  txt?: string; dim?: string; accent?: string;
+  laneSaturation: number; laneLightness: number;
+}
+
+export interface SwimlanesOptions {
+  newestFirst?: boolean;
+  showLaneGuides?: boolean;
+  detectPullRequests?: boolean;
+  multiExpand?: boolean;
+}
+
+// ─── Host ↔ webview message protocol (vscode §2 / intellij §2) ────────────────
+
+/** Webview → Host. */
+export type Wv2Host =
+  | { type: "ready" }
+  | { type: "requestDiff"; reqId: string; hash: string; path: string; oldPath?: string }
+  | { type: "commitSelected"; hash: string }
+  | { type: "openFile"; path: string; hash: string };
+
+/** Host → Webview. */
+export type Host2Wv =
+  | { type: "init"; commits: CommitNode[]; theme: Theme }
+  | { type: "setLog"; log: string }
+  | { type: "diffResult"; reqId: string; unified: string }
+  | { type: "diffError"; reqId: string; message: string }
+  | { type: "theme"; theme: Theme };
