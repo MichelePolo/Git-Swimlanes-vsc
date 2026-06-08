@@ -12,10 +12,12 @@ export interface DiffModalProps {
   req: DiffRequest;
   state: DiffState;
   onClose: () => void;
+  /** If given, show an "open in editor" affordance for the current file. */
+  onOpenFile?: () => void;
 }
 
 /** Modal diff viewer with per-line classification. See engine spec §5.3. */
-export function DiffModal({ req, state, onClose }: DiffModalProps): JSX.Element {
+export function DiffModal({ req, state, onClose, onOpenFile }: DiffModalProps): JSX.Element {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -29,6 +31,11 @@ export function DiffModal({ req, state, onClose }: DiffModalProps): JSX.Element 
       <div className="diffcard">
         <div className="diffhead">
           <span className="difftitle mono">{req.path}</span>
+          {onOpenFile && (
+            <button type="button" aria-label="Apri il file nell'editor" title="Apri nell'editor" onClick={onOpenFile}>
+              Apri file
+            </button>
+          )}
           <button type="button" aria-label="Chiudi diff" title="Chiudi (Esc)" onClick={onClose}>
             ✕
           </button>

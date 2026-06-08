@@ -10,6 +10,7 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly ctx: vscode.ExtensionContext,
     private readonly git: GitService,
+    private readonly repoRoot: string,
   ) {}
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -41,7 +42,23 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
           this.post({ type: "diffError", reqId: msg.reqId, message: String(e) });
         }
         break;
-      // TODO (spec §4.1): commitSelected, openFile.
+      case "openFile":
+        await this.openFile(msg.path);
+        break;
+      case "commitSelected":
+        // No host-side action defined yet; the engine already shows the selection.
+        // Wired so the message is handled rather than silently dropped (hook point).
+        break;
+    }
+  }
+
+  /** Open the current working-tree file in the editor (engine "openFile"). */
+  private async openFile(relPath: string): Promise<void> {
+    const uri = vscode.Uri.joinPath(vscode.Uri.file(this.repoRoot), relPath);
+    try {
+      await vscode.window.showTextDocument(uri, { preview: false });
+    } catch {
+      void vscode.window.showWarningMessage(`Git Swimlanes: impossibile aprire ${relPath}`);
     }
   }
 

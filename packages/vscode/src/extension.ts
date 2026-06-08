@@ -9,7 +9,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
     return;
   }
   const git = new GitService(root);
-  const provider = new SwimlanesViewProvider(ctx, git);
+  const provider = new SwimlanesViewProvider(ctx, git, root);
 
   ctx.subscriptions.push(
     vscode.window.registerWebviewViewProvider(SwimlanesViewProvider.viewId, provider),

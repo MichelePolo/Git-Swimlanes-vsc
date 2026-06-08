@@ -26,6 +26,8 @@ export interface GitSwimlanesProps {
   onCommitSelect?(commit: CommitNode): void;
   onFileSelect?(req: DiffRequest): void;
   onRequestDiff?(req: DiffRequest): Promise<DiffResult>;
+  /** Open the file in the host's editor (e.g. from the diff viewer). */
+  onOpenFile?(req: DiffRequest): void;
 }
 
 const DEFAULTS: Required<SwimlanesOptions> = {
@@ -41,7 +43,8 @@ const DEFAULTS: Required<SwimlanesOptions> = {
  * engine spec §5–§6.
  */
 export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
-  const { log, commits: commitsProp, options, onCommitToggle, onCommitSelect, onFileSelect, onRequestDiff } = props;
+  const { log, commits: commitsProp, options, onCommitToggle, onCommitSelect, onFileSelect, onRequestDiff, onOpenFile } =
+    props;
   const opts = { ...DEFAULTS, ...options };
 
   // Topology runs once per input; expansion-independent.
@@ -112,7 +115,14 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
           ))}
         </div>
       </div>
-      {diff && <DiffModal req={diff.req} state={diff.state} onClose={() => setDiff(null)} />}
+      {diff && (
+        <DiffModal
+          req={diff.req}
+          state={diff.state}
+          onClose={() => setDiff(null)}
+          onOpenFile={onOpenFile ? () => onOpenFile(diff.req) : undefined}
+        />
+      )}
     </div>
   );
 }

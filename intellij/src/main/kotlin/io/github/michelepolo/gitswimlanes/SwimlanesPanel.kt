@@ -3,8 +3,10 @@ package io.github.michelepolo.gitswimlanes
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.JBColor
+import git4idea.repo.GitRepositoryManager
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
@@ -99,8 +101,16 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
           onEdt { postToWebview(mapOf("type" to "diffError", "reqId" to msg.reqId, "message" to (e.message ?: "git error"))) }
         }
       }
-      // "openFile", "commitSelected": TODO (spec §4.2)
+      "openFile" -> onEdt { openInEditor(msg.path!!) }
+      "commitSelected" -> Unit // handled (no host action defined yet); the engine shows it
     }
+  }
+
+  /** Open the current working-tree file in the editor (engine "openFile"). */
+  private fun openInEditor(relPath: String) {
+    val root = GitRepositoryManager.getInstance(project).repositories.firstOrNull()?.root ?: return
+    val file = root.findFileByRelativePath(relPath) ?: return
+    FileEditorManager.getInstance(project).openFile(file, true)
   }
 
   /**
