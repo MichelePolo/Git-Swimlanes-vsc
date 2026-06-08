@@ -89,6 +89,21 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     expect(onRequestDiff).toHaveBeenCalledTimes(2);
   });
 
+  it("seeds expansion from initialExpanded (restored UI state)", () => {
+    render(<GitSwimlanes commits={commits} initialExpanded={["f1"]} />);
+    // f1's file panel is open on first render, without any click.
+    expect(screen.getByText("src/login.ts")).toBeInTheDocument();
+  });
+
+  it("reports expansion changes via onExpandedChange", () => {
+    const onExpandedChange = vi.fn();
+    render(<GitSwimlanes commits={commits} onExpandedChange={onExpandedChange} />);
+    fireEvent.click(screen.getByText("Add login")); // expand f1
+    expect(onExpandedChange).toHaveBeenLastCalledWith(["f1"]);
+    fireEvent.click(screen.getByText("Add login")); // collapse f1
+    expect(onExpandedChange).toHaveBeenLastCalledWith([]);
+  });
+
   it("suppresses PR badges when detectPullRequests is false", () => {
     const on = render(<GitSwimlanes commits={commits} />);
     expect(on.container.querySelectorAll(".pill.pr")).toHaveLength(1); // m1 has a PR subject

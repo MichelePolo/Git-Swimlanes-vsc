@@ -29,6 +29,10 @@ export interface GitSwimlanesProps {
   onRequestDiff?(req: DiffRequest): Promise<DiffResult>;
   /** Open the file in the host's editor (e.g. from the diff viewer). */
   onOpenFile?(req: DiffRequest): void;
+  /** Initial set of expanded commit hashes (e.g. restored persisted UI state). */
+  initialExpanded?: string[];
+  /** Called whenever the expanded set changes, so the host can persist it. */
+  onExpandedChange?(expanded: string[]): void;
 }
 
 const DEFAULTS: Required<SwimlanesOptions> = {
@@ -47,8 +51,18 @@ const VIRTUALIZE_THRESHOLD = 400;
  * engine spec §5–§6.
  */
 export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
-  const { log, commits: commitsProp, options, onCommitToggle, onCommitSelect, onFileSelect, onRequestDiff, onOpenFile } =
-    props;
+  const {
+    log,
+    commits: commitsProp,
+    options,
+    onCommitToggle,
+    onCommitSelect,
+    onFileSelect,
+    onRequestDiff,
+    onOpenFile,
+    initialExpanded,
+    onExpandedChange,
+  } = props;
   const opts = { ...DEFAULTS, ...options };
 
   // Topology runs once per input; expansion-independent.
@@ -72,7 +86,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
   // Lane colors follow the host theme's lightness/saturation (e.g. dimmer on light themes).
   const color = useMemo(() => laneColorer(props.theme), [props.theme]);
 
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(initialExpanded ?? []));
   const offsets = useMemo(() => computeOffsets(model, expanded), [model, expanded]);
 
   // Virtualization: render only the visible row window for large repos. The window math is
@@ -105,12 +119,11 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   function toggle(hash: string): void {
     const willExpand = !expanded.has(hash);
-    setExpanded((prev) => {
-      const next = new Set(opts.multiExpand ? prev : []);
-      if (prev.has(hash)) next.delete(hash);
-      else next.add(hash);
-      return next;
-    });
+    const next = new Set(opts.multiExpand ? expanded : []);
+    if (next.has(hash)) next.delete(hash);
+    else next.add(hash);
+    setExpanded(next);
+    onExpandedChange?.([...next]);
     onCommitToggle?.(hash, willExpand);
     const c = model.byHash[hash];
     if (c) onCommitSelect?.(c);
