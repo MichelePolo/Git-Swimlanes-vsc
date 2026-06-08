@@ -5,9 +5,19 @@ import { GitSwimlanes } from "./ui/GitSwimlanes.js";
 import { createController, type ViewState } from "./webviewController.js";
 import "./engine.css";
 
+/** Persisted webview UI state (VS Code getState/setState). */
+interface PersistedState {
+  expanded?: string[];
+}
+
 declare global {
   interface Window {
-    __host?: { post(msg: Wv2Host): void };
+    __host?: {
+      post(msg: Wv2Host): void;
+      /** Optional UI-state persistence (VS Code). Absent on hosts without it (JCEF). */
+      getState?(): PersistedState | undefined;
+      setState?(state: PersistedState): void;
+    };
     GitSwimlanes: {
       receive(msg: Host2Wv): void;
       onReady?: () => void;
@@ -37,6 +47,13 @@ function boot(): void {
   const host = { post: (msg: Wv2Host) => window.__host?.post(msg) };
   const controller = createController(host, render);
 
+  // Restore persisted UI state (no-op on hosts without getState, e.g. JCEF).
+  const initialExpanded = window.__host?.getState?.()?.expanded;
+  const persistExpanded = (expanded: string[]): void => {
+    const cur = window.__host?.getState?.() ?? {};
+    window.__host?.setState?.({ ...cur, expanded });
+  };
+
   function render(state: ViewState): void {
     applyTheme(state.theme);
     root.render(
@@ -47,6 +64,8 @@ function boot(): void {
         onRequestDiff: controller.requestDiff,
         onCommitSelect: (c) => host.post({ type: "commitSelected", hash: c.hash }),
         onOpenFile: (req) => host.post({ type: "openFile", path: req.path, hash: req.hash }),
+        initialExpanded,
+        onExpandedChange: persistExpanded,
       }),
     );
   }
