@@ -9,7 +9,12 @@ const LOG_ARGS = [
 ];
 
 export class GitService {
-  constructor(private readonly cwd: string) {}
+  constructor(private cwd: string) {}
+
+  /** Point at a different repository root (multi-repo switch). */
+  setCwd(cwd: string): void {
+    this.cwd = cwd;
+  }
 
   async log(): Promise<string> {
     const { stdout } = await run("git", LOG_ARGS, {

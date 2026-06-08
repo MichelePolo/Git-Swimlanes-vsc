@@ -12,6 +12,7 @@ data class WvMessage(
   val hash: String? = null,
   val path: String? = null,
   val oldPath: String? = null,
+  val id: String? = null,
 )
 
 object Json {

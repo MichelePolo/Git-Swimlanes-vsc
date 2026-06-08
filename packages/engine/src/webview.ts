@@ -66,6 +66,9 @@ function boot(): void {
         onOpenFile: (req) => host.post({ type: "openFile", path: req.path, hash: req.hash }),
         initialExpanded,
         onExpandedChange: persistExpanded,
+        repos: state.repos,
+        currentRepo: state.currentRepo,
+        onSelectRepo: (id) => host.post({ type: "selectRepo", id }),
       }),
     );
   }

@@ -3,6 +3,7 @@ package io.github.michelepolo.gitswimlanes
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import git4idea.repo.GitRepositoryManager
 
 /**
@@ -12,8 +13,28 @@ import git4idea.repo.GitRepositoryManager
  */
 class GitService(private val project: Project) {
 
+  private var currentRoot: String? = null
+
+  /** Switch which repository (by root path) is read (multi-repo projects). */
+  fun setRepo(root: String) {
+    currentRoot = root
+  }
+
+  /** (rootPath, label) for every Git repository in the project. */
+  fun repos(): List<Pair<String, String>> =
+    GitRepositoryManager.getInstance(project).repositories.map { it.root.path to it.root.name }
+
+  /** The VirtualFile of the currently selected repo root (for opening files). */
+  fun currentRepoRoot(): VirtualFile? {
+    val mgr = GitRepositoryManager.getInstance(project)
+    return currentRoot?.let { p -> mgr.repositories.firstOrNull { it.root.path == p }?.root }
+      ?: mgr.repositories.firstOrNull()?.root
+  }
+
+  fun currentRootPath(): String = repoRoot()
+
   private fun repoRoot(): String =
-    GitRepositoryManager.getInstance(project).repositories.firstOrNull()?.root?.path
+    currentRepoRoot()?.path
       ?: project.basePath
       ?: throw IllegalStateException("Nessun repository Git nel progetto")
 

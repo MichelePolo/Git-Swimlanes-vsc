@@ -5,6 +5,7 @@ import type {
   DiffResult,
   FileChange,
   PullRequestRef,
+  RepoRef,
   SwimlanesOptions,
   Theme,
 } from "@michelepolo/git-swimlanes-contract";
@@ -33,6 +34,10 @@ export interface GitSwimlanesProps {
   initialExpanded?: string[];
   /** Called whenever the expanded set changes, so the host can persist it. */
   onExpandedChange?(expanded: string[]): void;
+  /** Selectable repositories (multi-repo workspaces); a selector shows when length > 1. */
+  repos?: RepoRef[];
+  currentRepo?: string;
+  onSelectRepo?(id: string): void;
 }
 
 const DEFAULTS: Required<SwimlanesOptions> = {
@@ -62,6 +67,9 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     onOpenFile,
     initialExpanded,
     onExpandedChange,
+    repos,
+    currentRepo,
+    onSelectRepo,
   } = props;
   const opts = { ...DEFAULTS, ...options };
 
@@ -153,6 +161,22 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   return (
     <div className="git-swimlanes">
+      {repos && repos.length > 1 && (
+        <div className="sw-toolbar">
+          <select
+            className="repo-select"
+            aria-label="Repository"
+            value={currentRepo ?? ""}
+            onChange={(e) => onSelectRepo?.(e.target.value)}
+          >
+            {repos.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="sw-head">
         <LaneHeader model={model} color={color} />
         <div className="sw-rows-head" />

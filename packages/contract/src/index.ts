@@ -58,6 +58,12 @@ export interface SwimlanesOptions {
   multiExpand?: boolean;
 }
 
+/** A selectable Git repository (for multi-repo workspaces/projects). */
+export interface RepoRef {
+  id: string;     // stable identifier (e.g. absolute root path)
+  label: string;  // human-friendly name (e.g. folder name)
+}
+
 // ─── Host ↔ webview message protocol (vscode §2 / intellij §2) ────────────────
 
 /** Webview → Host. */
@@ -65,7 +71,8 @@ export type Wv2Host =
   | { type: "ready" }
   | { type: "requestDiff"; reqId: string; hash: string; path: string; oldPath?: string }
   | { type: "commitSelected"; hash: string }
-  | { type: "openFile"; path: string; hash: string };
+  | { type: "openFile"; path: string; hash: string }
+  | { type: "selectRepo"; id: string };
 
 /** Host → Webview. */
 export type Host2Wv =
@@ -73,4 +80,5 @@ export type Host2Wv =
   | { type: "setLog"; log: string }
   | { type: "diffResult"; reqId: string; unified: string }
   | { type: "diffError"; reqId: string; message: string }
-  | { type: "theme"; theme: Theme };
+  | { type: "theme"; theme: Theme }
+  | { type: "repos"; repos: RepoRef[]; current: string };

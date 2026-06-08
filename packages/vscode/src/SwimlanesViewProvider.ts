@@ -1,19 +1,22 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import type { Host2Wv, Theme, Wv2Host } from "@michelepolo/git-swimlanes-contract";
+import type { Host2Wv, RepoRef, Theme, Wv2Host } from "@michelepolo/git-swimlanes-contract";
 import { GitService } from "./GitService.js";
 import { buildHtml } from "./html.js";
 
 export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "gitSwimlanes.graph";
   private view?: vscode.WebviewView;
+  private currentRoot: string;
 
   constructor(
     private readonly ctx: vscode.ExtensionContext,
     private readonly git: GitService,
-    private readonly repoRoot: string,
-  ) {}
+    repoRoot: string,
+  ) {
+    this.currentRoot = repoRoot;
+  }
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
@@ -30,6 +33,15 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
     const log = await this.git.log();
     this.post({ type: "setLog", log });
     this.postTheme();
+    const repos = await this.listRepos();
+    if (repos.length > 1) this.post({ type: "repos", repos, current: this.currentRoot });
+  }
+
+  /** Enumerate the workspace's Git repositories via the built-in Git extension. */
+  private async listRepos(): Promise<RepoRef[]> {
+    const ext = vscode.extensions.getExtension<{ getAPI(v: 1): { repositories: { rootUri: vscode.Uri }[] } }>("vscode.git");
+    const api = ext?.isActive ? ext.exports.getAPI(1) : (await ext?.activate())?.getAPI(1);
+    return (api?.repositories ?? []).map((r) => ({ id: r.rootUri.fsPath, label: path.basename(r.rootUri.fsPath) }));
   }
 
   /** Lane lightness follows the editor theme: lighter (dimmer) on light themes. */
@@ -60,6 +72,11 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         // No host-side action defined yet; the engine already shows the selection.
         // Wired so the message is handled rather than silently dropped (hook point).
         break;
+      case "selectRepo":
+        this.currentRoot = msg.id;
+        this.git.setCwd(msg.id);
+        await this.refresh();
+        break;
     }
   }
 
@@ -74,8 +91,8 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
     const normalized = path.normalize(relPath);
     if (path.isAbsolute(normalized) || normalized.split(path.sep).includes("..")) return;
     try {
-      const full = path.resolve(this.repoRoot, normalized);
-      const [real, realRoot] = await Promise.all([fs.promises.realpath(full), fs.promises.realpath(this.repoRoot)]);
+      const full = path.resolve(this.currentRoot, normalized);
+      const [real, realRoot] = await Promise.all([fs.promises.realpath(full), fs.promises.realpath(this.currentRoot)]);
       if (real !== realRoot && !real.startsWith(realRoot + path.sep)) return;
       await vscode.window.showTextDocument(vscode.Uri.file(real), { preview: false });
     } catch {
