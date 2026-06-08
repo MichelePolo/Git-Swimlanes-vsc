@@ -10,15 +10,29 @@ export interface GraphProps {
   showLaneGuides?: boolean;
   /** Branch → color (theme-aware); defaults to the dark-tuned colorFor. */
   color?: (name: string) => string;
+  /** Visible row window [first, last); when set, only intersecting nodes/edges render. */
+  range?: [number, number];
 }
 
 /**
  * The SVG history graph: lane guides, parent edges, and commit nodes. See spec §5.1.
  * Vertical positions come from `offsets` (shared with the rows so they stay aligned).
  */
-export function Graph({ model, offsets, prHashes, showLaneGuides = true, color = colorFor }: GraphProps): JSX.Element {
+export function Graph({
+  model,
+  offsets,
+  prHashes,
+  showLaneGuides = true,
+  color = colorFor,
+  range,
+}: GraphProps): JSX.Element {
   const { dotY, totalH } = offsets;
   const pr = prHashes ?? new Set<string>();
+  const [rFirst, rLast] = range ?? [0, model.commits.length];
+  const inWindow = (hash: string): boolean => {
+    const r = model.rowOf[hash];
+    return r >= rFirst && r < rLast;
+  };
 
   const guides = showLaneGuides
     ? model.laneNames.map((name, i) => (
@@ -42,6 +56,7 @@ export function Graph({ model, offsets, prHashes, showLaneGuides = true, color =
     const cy = dotY(model.rowOf[c.hash]);
     c.parents.forEach((p, idx) => {
       if (!(p in model.byHash)) return; // parent absent (e.g. shallow clone) → omit edge
+      if (!inWindow(c.hash) && !inWindow(p)) return; // edge entirely outside the window
       const px = laneX(model.laneOf[p]);
       const py = dotY(model.rowOf[p]);
       // first-parent → child's color (continuity); other parents → parent's color (merge).
@@ -68,6 +83,7 @@ export function Graph({ model, offsets, prHashes, showLaneGuides = true, color =
 
   const nodes: JSX.Element[] = [];
   for (const c of model.commits) {
+    if (!inWindow(c.hash)) continue; // node outside the visible window
     const x = laneX(model.laneOf[c.hash]);
     const y = dotY(model.rowOf[c.hash]);
     const col = color(model.branchOf[c.hash]);

@@ -40,3 +40,27 @@ export function computeOffsets(
   const dotY = (i: number): number => top[i] + LAYOUT.rowH / 2;
   return { top, totalH: y, dotY };
 }
+
+/**
+ * Half-open range [first, last) of row indices intersecting the viewport, padded by
+ * `overscan` rows on each side. Pure: the component supplies measured scrollTop/viewportH
+ * and the offset array from {@link computeOffsets}. See engine spec §9 (virtualization).
+ */
+export function visibleRange(
+  top: number[],
+  totalH: number,
+  scrollTop: number,
+  viewportH: number,
+  overscan = 6,
+): [number, number] {
+  const n = top.length;
+  if (n === 0) return [0, 0];
+  const bottomOf = (i: number): number => (i + 1 < n ? top[i + 1] : totalH);
+
+  let first = 0;
+  while (first < n && bottomOf(first) <= scrollTop) first++;
+  let last = first;
+  while (last < n && top[last] < scrollTop + viewportH) last++;
+
+  return [Math.max(0, first - overscan), Math.min(n, last + overscan)];
+}

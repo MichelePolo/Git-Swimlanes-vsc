@@ -8,6 +8,16 @@
   font-size: 14px;
   color: var(--txt);
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+}
+/* The body scrolls under the lane header; bounding its height is what enables
+   virtualization (viewportH < totalH) for large repos. */
+.sw-scroll {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .git-swimlanes .mono,
 .git-swimlanes .hash,
