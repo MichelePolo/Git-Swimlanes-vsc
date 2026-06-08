@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   CommitNode,
   DiffRequest,
@@ -12,7 +12,7 @@ import { parseLog } from "../model/parseLog.js";
 import { assignLanes } from "../model/assignLanes.js";
 import { detectPR } from "../model/detectPR.js";
 import { laneColorer } from "../model/color.js";
-import { computeOffsets } from "../layout.js";
+import { computeOffsets, visibleRange } from "../layout.js";
 import { Graph } from "./Graph.js";
 import { LaneHeader } from "./LaneHeader.js";
 import { Row } from "./Row.js";
@@ -37,6 +37,9 @@ const DEFAULTS: Required<SwimlanesOptions> = {
   detectPullRequests: true,
   multiExpand: true,
 };
+
+/** Above this many commits the rows + graph render only the visible window (spec §9). */
+const VIRTUALIZE_THRESHOLD = 400;
 
 /**
  * Deterministic Git history visualizer. Composes the SVG graph and the HTML rows
@@ -71,6 +74,30 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const offsets = useMemo(() => computeOffsets(model, expanded), [model, expanded]);
+
+  // Virtualization: render only the visible row window for large repos. The window math is
+  // pure (visibleRange); here we only measure the scroll viewport. In environments without
+  // layout (jsdom) viewportH stays 0, so everything renders — keeping behavior simple/testable.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState({ scrollTop: 0, viewportH: 0 });
+  useLayoutEffect(() => {
+    const measure = (): void => {
+      const el = scrollRef.current;
+      if (el) setView((v) => ({ ...v, viewportH: el.clientHeight }));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [model]);
+  const onScroll = (): void => {
+    const el = scrollRef.current;
+    if (el) setView({ scrollTop: el.scrollTop, viewportH: el.clientHeight });
+  };
+  const n = model.commits.length;
+  const windowed = n > VIRTUALIZE_THRESHOLD && view.viewportH > 0;
+  const [first, last] = windowed
+    ? visibleRange(offsets.top, offsets.totalH, view.scrollTop, view.viewportH)
+    : [0, n];
 
   const [diff, setDiff] = useState<{ req: DiffRequest; state: DiffState } | null>(null);
   // A commit's diff for a path is immutable, so cache by hash:path across the session.
@@ -117,20 +144,37 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
         <LaneHeader model={model} color={color} />
         <div className="sw-rows-head" />
       </div>
-      <div className="sw-body">
-        <Graph model={model} offsets={offsets} prHashes={prHashes} showLaneGuides={opts.showLaneGuides} color={color} />
-        <div className="sw-rows">
-          {model.commits.map((c) => (
-            <Row
-              key={c.hash}
-              commit={c}
-              pr={prByHash[c.hash] ?? null}
-              expanded={expanded.has(c.hash)}
-              onToggle={() => toggle(c.hash)}
-              onFileSelect={(f) => selectFile(c, f)}
-              color={color}
-            />
-          ))}
+      <div className="sw-scroll" ref={scrollRef} onScroll={onScroll}>
+        <div className="sw-body">
+          <Graph
+            model={model}
+            offsets={offsets}
+            prHashes={prHashes}
+            showLaneGuides={opts.showLaneGuides}
+            color={color}
+            range={windowed ? [first, last] : undefined}
+          />
+          <div className="sw-rows" style={{ position: "relative", height: offsets.totalH }}>
+            {model.commits.slice(first, last).map((c, j) => {
+              const i = first + j;
+              return (
+                <div
+                  key={c.hash}
+                  className="sw-rowpos"
+                  style={{ position: "absolute", top: offsets.top[i], left: 0, right: 0 }}
+                >
+                  <Row
+                    commit={c}
+                    pr={prByHash[c.hash] ?? null}
+                    expanded={expanded.has(c.hash)}
+                    onToggle={() => toggle(c.hash)}
+                    onFileSelect={(f) => selectFile(c, f)}
+                    color={color}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
       {diff && (
