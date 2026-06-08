@@ -14,8 +14,6 @@ const FILE_LINE = /^[ACDMRTUXB]\d*\t/;
  *   - "HEAD"  (bare)      → head = true, no branch
  *   - anything else       → a branch name
  * Entries are comma-separated; trim each, and skip empty entries.
- *
- * TODO (learning-mode contribution): implement this.
  */
 function parseRefs(refs: string): { branches: string[]; tags: string[]; head: boolean } {
   const branches: string[] = [];

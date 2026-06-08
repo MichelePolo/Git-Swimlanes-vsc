@@ -13,6 +13,7 @@ import { assignLanes } from "../model/assignLanes.js";
 import { detectPR } from "../model/detectPR.js";
 import { computeOffsets } from "../layout.js";
 import { Graph } from "./Graph.js";
+import { LaneHeader } from "./LaneHeader.js";
 import { Row } from "./Row.js";
 import { DiffModal, type DiffState } from "./DiffModal.js";
 
@@ -92,6 +93,10 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   return (
     <div className="git-swimlanes">
+      <div className="sw-head">
+        <LaneHeader model={model} />
+        <div className="sw-rows-head" />
+      </div>
       <div className="sw-body">
         <Graph model={model} offsets={offsets} prHashes={prHashes} showLaneGuides={opts.showLaneGuides} />
         <div className="sw-rows">
