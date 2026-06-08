@@ -49,4 +49,16 @@ describe("DiffModal (spec §5.3)", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("shows an 'open file' button that calls onOpenFile when provided", () => {
+    const onOpenFile = vi.fn();
+    render(<DiffModal req={req} state={{ status: "loading" }} onClose={() => {}} onOpenFile={onOpenFile} />);
+    fireEvent.click(screen.getByRole("button", { name: /apri.*editor/i }));
+    expect(onOpenFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits the open-file button when onOpenFile is not provided", () => {
+    render(<DiffModal req={req} state={{ status: "loading" }} onClose={() => {}} />);
+    expect(screen.queryByRole("button", { name: /apri.*editor/i })).toBeNull();
+  });
 });

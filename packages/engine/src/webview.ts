@@ -45,6 +45,8 @@ function boot(): void {
         commits: state.commits,
         theme: state.theme,
         onRequestDiff: controller.requestDiff,
+        onCommitSelect: (c) => host.post({ type: "commitSelected", hash: c.hash }),
+        onOpenFile: (req) => host.post({ type: "openFile", path: req.path, hash: req.hash }),
       }),
     );
   }
