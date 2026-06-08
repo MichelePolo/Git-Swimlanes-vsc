@@ -12,3 +12,9 @@ declare namespace JSX {
 // Allow side-effect CSS imports (processed by tsup's bundler).
 declare module "*.css" {}
 
+// The bundled Web Worker source, inlined as a string by the tsup inline-worker plugin.
+declare module "inline:worker" {
+  const code: string;
+  export default code;
+}
+
