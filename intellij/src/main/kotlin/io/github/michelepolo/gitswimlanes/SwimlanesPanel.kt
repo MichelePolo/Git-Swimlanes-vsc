@@ -93,8 +93,11 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
               "laneLightness" to if (dark) 60 else 45,
               "bg" to hex(UIUtil.getPanelBackground()),
               "panel" to hex(UIUtil.getPanelBackground()),
+              "panel2" to hex(UIUtil.getTextFieldBackground()),
               "txt" to hex(UIUtil.getLabelForeground()),
+              "dim" to hex(UIUtil.getInactiveTextColor()),
               "line" to hex(JBColor.border()),
+              "accent" to hex(JBColor.link()),
             ),
           ),
         )
@@ -109,7 +112,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
         }
       }
     } catch (e: Exception) {
-      onEdt { postToWebview(mapOf("type" to "diffError", "reqId" to "*", "message" to (e.message ?: "git error"))) }
+      onEdt { notifyWarn("Aggiornamento fallito: ${e.message}") }
     }
   }
 
@@ -119,7 +122,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
       "ready" -> refresh()
       "requestDiff" -> runOnPooled {
         try {
-          val unified = git.show(msg.hash!!, msg.path!!)
+          val unified = git.show(msg.hash!!, msg.path!!, msg.oldPath)
           onEdt { postToWebview(mapOf("type" to "diffResult", "reqId" to msg.reqId, "unified" to unified)) }
         } catch (e: Exception) {
           onEdt { postToWebview(mapOf("type" to "diffError", "reqId" to msg.reqId, "message" to (e.message ?: "git error"))) }
@@ -135,17 +138,20 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
         try {
           git.fetchPullRefs()
           refresh()
+          onEdt { notify("Ref delle pull request scaricati.", NotificationType.INFORMATION) }
         } catch (e: Exception) {
-          onEdt { notifyWarn("Fetch PR fallito: ${e.message}") }
+          onEdt { notify("Fetch PR fallito: ${e.message}", NotificationType.WARNING) }
         }
       }
     }
   }
 
-  private fun notifyWarn(message: String) {
+  private fun notifyWarn(message: String) = notify(message, NotificationType.WARNING)
+
+  private fun notify(message: String, type: NotificationType) {
     NotificationGroupManager.getInstance()
       .getNotificationGroup("Git Swimlanes")
-      .createNotification(message, NotificationType.WARNING)
+      .createNotification(message, type)
       .notify(project)
   }
 
@@ -160,8 +166,12 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     if (normalized.startsWith("/") || normalized.split("/").contains("..")) return
     val root = git.currentRepoRoot() ?: return
     val file = root.findFileByRelativePath(normalized) ?: return
-    if (!VfsUtilCore.isAncestor(root, file, false)) return
-    FileEditorManager.getInstance(project).openFile(file, true)
+    // Resolve symlinks before the containment check, so an in-repo symlink pointing outside
+    // the root cannot open an external file (parity with the VS Code realpath guard).
+    val realFile = file.canonicalFile ?: file
+    val realRoot = root.canonicalFile ?: root
+    if (!VfsUtilCore.isAncestor(realRoot, realFile, false)) return
+    FileEditorManager.getInstance(project).openFile(realFile, true)
   }
 
   /**

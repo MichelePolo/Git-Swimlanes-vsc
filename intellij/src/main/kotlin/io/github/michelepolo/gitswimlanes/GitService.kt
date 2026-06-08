@@ -46,9 +46,11 @@ class GitService(private val project: Project) {
     ),
   )
 
-  fun show(hash: String, path: String): String {
+  fun show(hash: String, path: String, oldPath: String? = null): String {
     require(hash.matches(Regex("^[0-9a-f]{7,40}$"))) { "hash non valido" }
-    return rawGit(listOf("show", "-M", hash, "--", path))
+    // For renames, pass both paths after `--` so the rename hunk renders (spec §5.3).
+    val paths = if (oldPath != null) listOf(oldPath, path) else listOf(path)
+    return rawGit(listOf("show", "-M", hash, "--") + paths)
   }
 
   /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). Uses git's creds. */

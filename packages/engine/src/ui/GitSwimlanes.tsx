@@ -108,7 +108,9 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
   useLayoutEffect(() => {
     const measure = (): void => {
       const el = scrollRef.current;
-      if (el) setView((v) => ({ ...v, viewportH: el.clientHeight }));
+      // Re-read scrollTop too: a model change can clamp it (e.g. switching to a smaller
+      // repo), and a stale scrollTop would compute an empty window until the next scroll.
+      if (el) setView({ scrollTop: el.scrollTop, viewportH: el.clientHeight });
     };
     measure();
     window.addEventListener("resize", measure);

@@ -54,9 +54,11 @@ export class GitService {
     return remotes.includes("origin") ? "origin" : remotes[0];
   }
 
-  async show(hash: string, path: string): Promise<string> {
+  async show(hash: string, path: string, oldPath?: string): Promise<string> {
     if (!/^[0-9a-f]{7,40}$/.test(hash)) throw new Error("invalid hash");
-    const { stdout } = await run("git", ["show", "-M", hash, "--", path], {
+    // For renames, pass both paths after `--` so the rename hunk renders (spec §5.3).
+    const paths = oldPath ? [oldPath, path] : [path];
+    const { stdout } = await run("git", ["show", "-M", hash, "--", ...paths], {
       cwd: this.cwd, maxBuffer: 32 * 1024 * 1024,
     });
     return stdout;

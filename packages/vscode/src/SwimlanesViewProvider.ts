@@ -25,23 +25,39 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [vscode.Uri.joinPath(this.ctx.extensionUri, "media")],
     };
     view.webview.html = buildHtml(view.webview, this.ctx.extensionUri);
-    view.webview.onDidReceiveMessage((msg: Wv2Host) => void this.onMessage(msg));
+    // The webview is destroyed when hidden and resolved again on show; dispose the prior
+    // listener and clear the reference on disposal so we never post to a dead webview.
+    const sub = view.webview.onDidReceiveMessage((msg: Wv2Host) => void this.onMessage(msg));
+    view.onDidDispose(() => {
+      sub.dispose();
+      if (this.view === view) this.view = undefined;
+    });
   }
 
   async refresh(): Promise<void> {
     if (!this.view) return;
-    const log = await this.git.log();
-    this.post({ type: "setLog", log });
-    this.postTheme();
-    const repos = await this.listRepos();
-    if (repos.length > 1) this.post({ type: "repos", repos, current: this.currentRoot });
+    try {
+      const log = await this.git.log();
+      this.post({ type: "setLog", log });
+      this.postTheme();
+      const repos = await this.listRepos();
+      if (repos.length > 1) this.post({ type: "repos", repos, current: this.currentRoot });
+    } catch (e) {
+      void vscode.window.showErrorMessage(`Git Swimlanes: ${String(e)}`);
+    }
   }
 
-  /** Enumerate the workspace's Git repositories via the built-in Git extension. */
+  /** Enumerate the workspace's Git repositories via the built-in Git extension (best-effort). */
   private async listRepos(): Promise<RepoRef[]> {
-    const ext = vscode.extensions.getExtension<{ getAPI(v: 1): { repositories: { rootUri: vscode.Uri }[] } }>("vscode.git");
-    const api = ext?.isActive ? ext.exports.getAPI(1) : (await ext?.activate())?.getAPI(1);
-    return (api?.repositories ?? []).map((r) => ({ id: r.rootUri.fsPath, label: path.basename(r.rootUri.fsPath) }));
+    try {
+      const ext = vscode.extensions.getExtension<{ getAPI(v: 1): { repositories: { rootUri: vscode.Uri }[] } }>(
+        "vscode.git",
+      );
+      const api = ext?.isActive ? ext.exports.getAPI(1) : (await ext?.activate())?.getAPI(1);
+      return (api?.repositories ?? []).map((r) => ({ id: r.rootUri.fsPath, label: path.basename(r.rootUri.fsPath) }));
+    } catch {
+      return []; // repo enumeration is optional; never break a successful log render
+    }
   }
 
   /** Lane lightness follows the editor theme: lighter (dimmer) on light themes. */
@@ -59,7 +75,7 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         break;
       case "requestDiff":
         try {
-          const unified = await this.git.show(msg.hash, msg.path);
+          const unified = await this.git.show(msg.hash, msg.path, msg.oldPath);
           this.post({ type: "diffResult", reqId: msg.reqId, unified });
         } catch (e) {
           this.post({ type: "diffError", reqId: msg.reqId, message: String(e) });
