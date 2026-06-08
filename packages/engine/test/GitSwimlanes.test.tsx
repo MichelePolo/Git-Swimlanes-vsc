@@ -55,6 +55,40 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     expect(await screen.findByText("+added")).toBeInTheDocument();
   });
 
+  it("caches diff results per hash:path (reopening the same file does not re-request)", async () => {
+    const onRequestDiff = vi.fn().mockResolvedValue({ unified: "@@ -1 +1 @@\n+added" });
+    render(<GitSwimlanes commits={commits} onRequestDiff={onRequestDiff} />);
+    fireEvent.click(screen.getByText("Add login")); // expand f1
+
+    // First open: fetches and shows the result.
+    fireEvent.click(screen.getByText("src/login.ts"));
+    expect(await screen.findByText("+added")).toBeInTheDocument();
+    expect(onRequestDiff).toHaveBeenCalledTimes(1);
+
+    // Close, then reopen the same file: served from cache, no new request.
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByText("src/login.ts"));
+    expect(await screen.findByText("+added")).toBeInTheDocument();
+    expect(onRequestDiff).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cache a failed diff (a later open retries)", async () => {
+    const onRequestDiff = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({ unified: "@@ -1 +1 @@\n+ok" });
+    render(<GitSwimlanes commits={commits} onRequestDiff={onRequestDiff} />);
+    fireEvent.click(screen.getByText("Add login"));
+
+    fireEvent.click(screen.getByText("src/login.ts"));
+    expect(await screen.findByText(/boom/)).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    fireEvent.click(screen.getByText("src/login.ts"));
+    expect(await screen.findByText("+ok")).toBeInTheDocument();
+    expect(onRequestDiff).toHaveBeenCalledTimes(2);
+  });
+
   it("suppresses PR badges when detectPullRequests is false", () => {
     const on = render(<GitSwimlanes commits={commits} />);
     expect(on.container.querySelectorAll(".pill.pr")).toHaveLength(1); // m1 has a PR subject

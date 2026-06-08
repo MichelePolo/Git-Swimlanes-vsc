@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type {
   CommitNode,
   DiffRequest,
@@ -73,6 +73,8 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
   const offsets = useMemo(() => computeOffsets(model, expanded), [model, expanded]);
 
   const [diff, setDiff] = useState<{ req: DiffRequest; state: DiffState } | null>(null);
+  // A commit's diff for a path is immutable, so cache by hash:path across the session.
+  const diffCache = useRef(new Map<string, DiffResult>());
 
   function toggle(hash: string): void {
     const willExpand = !expanded.has(hash);
@@ -91,9 +93,20 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     const req: DiffRequest = { hash: commit.hash, path: file.path, oldPath: file.old };
     onFileSelect?.(req);
     if (!onRequestDiff) return;
+
+    const key = `${req.hash}:${req.path}`;
+    const cached = diffCache.current.get(key);
+    if (cached) {
+      setDiff({ req, state: { status: "result", unified: cached.unified } });
+      return;
+    }
+
     setDiff({ req, state: { status: "loading" } });
     onRequestDiff(req).then(
-      (res) => setDiff({ req, state: { status: "result", unified: res.unified } }),
+      (res) => {
+        diffCache.current.set(key, res); // cache successes only — errors stay retryable
+        setDiff({ req, state: { status: "result", unified: res.unified } });
+      },
       (err: unknown) => setDiff({ req, state: { status: "error", message: String((err as Error)?.message ?? err) } }),
     );
   }
