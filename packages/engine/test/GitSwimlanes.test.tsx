@@ -30,6 +30,13 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     expect(container.querySelectorAll("[data-node]")).toHaveLength(3);
   });
 
+  it("renders a persistent lane-label header for each lane", () => {
+    const { container } = render(<GitSwimlanes commits={commits} />);
+    const labels = container.querySelectorAll(".lane-label");
+    expect(labels.length).toBeGreaterThan(0);
+    expect(container.querySelector('.lane-label[data-lane-label="main"]')).not.toBeNull();
+  });
+
   it("expands a commit's file panel on row click and reports the toggle", () => {
     const onCommitToggle = vi.fn();
     render(<GitSwimlanes commits={commits} onCommitToggle={onCommitToggle} />);

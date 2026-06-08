@@ -19,6 +19,28 @@
   font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* ── lane header (persistent rotated labels, spec §1/§5.1) ───────────── */
+.sw-head {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(180deg, var(--panel) 75%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.lane-head { flex: none; }
+.sw-rows-head { flex: 1; }
+.lane-tick { position: absolute; bottom: 0; width: 2px; height: 7px; border-radius: 1px; }
+.lane-label {
+  position: absolute;
+  bottom: 8px;
+  transform-origin: left bottom;
+  transform: rotate(-45deg);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* ── graph + rows, two aligned columns ───────────────────────────────── */
 .sw-body { display: flex; align-items: stretch; }
 .sw-body .graph { flex: none; display: block; }
