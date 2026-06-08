@@ -15,6 +15,7 @@ intellij/src/main/resources/web/engine.css
 # intellij / gradle
 intellij/.gradle/
 intellij/build/
+intellij/.intellijPlatform/
 .idea/
 
 # os
