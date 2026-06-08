@@ -15,6 +15,7 @@ export function buildHtml(webview: vscode.Webview, root: vscode.Uri): string {
   img-src ${webview.cspSource} data:;
   style-src ${webview.cspSource} 'unsafe-inline';
   font-src ${webview.cspSource};
+  worker-src blob:;
   script-src 'nonce-${nonce}';">
 <link rel="stylesheet" href="${uri("engine.css")}">
 <style>

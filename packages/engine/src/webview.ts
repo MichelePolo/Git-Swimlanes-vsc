@@ -1,9 +1,35 @@
 import { createRoot } from "react-dom/client";
 import { createElement } from "react";
-import type { Host2Wv, Theme, Wv2Host } from "@michelepolo/git-swimlanes-contract";
+import type { CommitNode, Host2Wv, Theme, Wv2Host } from "@michelepolo/git-swimlanes-contract";
+import workerCode from "inline:worker";
 import { GitSwimlanes } from "./ui/GitSwimlanes.js";
+import { parseLog } from "./model/parseLog.js";
 import { createController, type ViewState } from "./webviewController.js";
 import "./engine.css";
+
+/**
+ * A log parser that runs off the main thread in a Blob-URL Web Worker (so huge logs don't
+ * freeze the UI), falling back to synchronous parsing where Worker is unavailable. See §9.
+ */
+function createParser(): (log: string) => Promise<CommitNode[]> {
+  if (typeof Worker === "undefined") {
+    return (log) => Promise.resolve(parseLog(log).commits);
+  }
+  const url = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
+  const worker = new Worker(url);
+  let seq = 0;
+  const pending = new Map<number, (commits: CommitNode[]) => void>();
+  worker.onmessage = (e: MessageEvent<{ id: number; commits: CommitNode[] }>) => {
+    pending.get(e.data.id)?.(e.data.commits);
+    pending.delete(e.data.id);
+  };
+  return (log) =>
+    new Promise<CommitNode[]>((resolve) => {
+      const id = ++seq;
+      pending.set(id, resolve);
+      worker.postMessage({ id, log });
+    });
+}
 
 /** Persisted webview UI state (VS Code getState/setState). */
 interface PersistedState {
@@ -54,12 +80,16 @@ function boot(): void {
     window.__host?.setState?.({ ...cur, expanded });
   };
 
-  function render(state: ViewState): void {
-    applyTheme(state.theme);
+  const parse = createParser();
+  let latest: ViewState = { log: "" };
+  let parsedLog: string | undefined;
+  let parsedCommits: CommitNode[] | undefined;
+
+  function mount(commits: CommitNode[] | undefined, state: ViewState): void {
     root.render(
       createElement(GitSwimlanes, {
-        log: state.log,
-        commits: state.commits,
+        commits,
+        log: commits ? undefined : state.log,
         theme: state.theme,
         onRequestDiff: controller.requestDiff,
         onCommitSelect: (c) => host.post({ type: "commitSelected", hash: c.hash }),
@@ -72,6 +102,25 @@ function boot(): void {
         onFetchPullRefs: () => host.post({ type: "fetchPullRefs" }),
       }),
     );
+  }
+
+  function render(state: ViewState): void {
+    latest = state;
+    applyTheme(state.theme);
+    if (state.commits) {
+      mount(state.commits, state);
+      return;
+    }
+    const log = state.log ?? "";
+    if (log === parsedLog) {
+      mount(parsedCommits, state); // re-render (e.g. theme/repo change) without re-parsing
+      return;
+    }
+    void parse(log).then((commits) => {
+      parsedLog = log;
+      parsedCommits = commits;
+      if ((latest.log ?? "") === log && !latest.commits) mount(commits, latest);
+    });
   }
 
   // Preserve any onReady the host bridge already installed; expose receive().
