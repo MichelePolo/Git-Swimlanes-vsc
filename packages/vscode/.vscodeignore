@@ -5,5 +5,7 @@ tsup.config.ts
 **/*.map
 **/*.ts
 node_modules/**
+media/.gitkeep
+.vscodeignore
 
 # Keep: dist/extension.js, media/ (icon.svg, bridge.js, engine.js, engine.css), package.json
