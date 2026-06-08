@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import type { Host2Wv, Wv2Host } from "@michelepolo/git-swimlanes-contract";
+import type { Host2Wv, Theme, Wv2Host } from "@michelepolo/git-swimlanes-contract";
 import { GitService } from "./GitService.js";
 import { buildHtml } from "./html.js";
 
@@ -29,6 +29,15 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
     if (!this.view) return;
     const log = await this.git.log();
     this.post({ type: "setLog", log });
+    this.postTheme();
+  }
+
+  /** Lane lightness follows the editor theme: lighter (dimmer) on light themes. */
+  postTheme(): void {
+    const kind = vscode.window.activeColorTheme.kind;
+    const dark = kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast;
+    const theme: Theme = { laneSaturation: 68, laneLightness: dark ? 60 : 45 };
+    this.post({ type: "theme", theme });
   }
 
   private async onMessage(msg: Wv2Host): Promise<void> {

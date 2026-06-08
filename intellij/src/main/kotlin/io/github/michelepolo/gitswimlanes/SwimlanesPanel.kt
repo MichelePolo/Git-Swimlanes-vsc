@@ -11,6 +11,7 @@ import git4idea.repo.GitRepositoryManager
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
+import com.intellij.util.ui.UIUtil
 import git4idea.repo.GitRepository
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
@@ -59,6 +60,8 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     subscribeRepoChanges(parent)
   }
 
+  private fun hex(c: java.awt.Color): String = "#%02x%02x%02x".format(c.red, c.green, c.blue)
+
   /** Inline the synced engine bundle so loadHTML needs no relative-path resolution. */
   private fun loadEngine() {
     val css = readResource("/web/engine.css")
@@ -78,10 +81,18 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
       val dark = !JBColor.isBright()
       onEdt {
         postToWebview(mapOf("type" to "setLog", "log" to log))
+        // Lane lightness + base colors follow the IDE theme (JCEF inherits nothing).
         postToWebview(
           mapOf(
             "type" to "theme",
-            "theme" to mapOf("laneSaturation" to 68, "laneLightness" to if (dark) 60 else 45),
+            "theme" to mapOf(
+              "laneSaturation" to 68,
+              "laneLightness" to if (dark) 60 else 45,
+              "bg" to hex(UIUtil.getPanelBackground()),
+              "panel" to hex(UIUtil.getPanelBackground()),
+              "txt" to hex(UIUtil.getLabelForeground()),
+              "line" to hex(JBColor.border()),
+            ),
           ),
         )
       }

@@ -17,6 +17,19 @@ export function buildHtml(webview: vscode.Webview, root: vscode.Uri): string {
   font-src ${webview.cspSource};
   script-src 'nonce-${nonce}';">
 <link rel="stylesheet" href="${uri("engine.css")}">
+<style>
+  /* Map the engine's neutral tokens to VS Code theme colors (dark values as fallback),
+     so the panel follows the active editor theme. Lane hues are handled by the engine. */
+  :root {
+    --bg: var(--vscode-editor-background, #0d1117);
+    --panel: var(--vscode-sideBar-background, #11161f);
+    --panel2: var(--vscode-editorWidget-background, #0a0e14);
+    --line: var(--vscode-panel-border, #222b38);
+    --txt: var(--vscode-foreground, #c9d4e3);
+    --dim: var(--vscode-descriptionForeground, #6f7d92);
+    --accent: var(--vscode-textLink-foreground, #e8b04b);
+  }
+</style>
 </head>
 <body>
   <div id="app"></div>

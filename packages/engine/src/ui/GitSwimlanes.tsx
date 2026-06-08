@@ -11,6 +11,7 @@ import type {
 import { parseLog } from "../model/parseLog.js";
 import { assignLanes } from "../model/assignLanes.js";
 import { detectPR } from "../model/detectPR.js";
+import { laneColorer } from "../model/color.js";
 import { computeOffsets } from "../layout.js";
 import { Graph } from "./Graph.js";
 import { LaneHeader } from "./LaneHeader.js";
@@ -65,6 +66,9 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     [prByHash],
   );
 
+  // Lane colors follow the host theme's lightness/saturation (e.g. dimmer on light themes).
+  const color = useMemo(() => laneColorer(props.theme), [props.theme]);
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const offsets = useMemo(() => computeOffsets(model, expanded), [model, expanded]);
 
@@ -97,11 +101,11 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
   return (
     <div className="git-swimlanes">
       <div className="sw-head">
-        <LaneHeader model={model} />
+        <LaneHeader model={model} color={color} />
         <div className="sw-rows-head" />
       </div>
       <div className="sw-body">
-        <Graph model={model} offsets={offsets} prHashes={prHashes} showLaneGuides={opts.showLaneGuides} />
+        <Graph model={model} offsets={offsets} prHashes={prHashes} showLaneGuides={opts.showLaneGuides} color={color} />
         <div className="sw-rows">
           {model.commits.map((c) => (
             <Row
@@ -111,6 +115,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
               expanded={expanded.has(c.hash)}
               onToggle={() => toggle(c.hash)}
               onFileSelect={(f) => selectFile(c, f)}
+              color={color}
             />
           ))}
         </div>
