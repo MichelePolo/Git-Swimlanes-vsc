@@ -20,6 +20,24 @@ npm run sync       # copy engine.js/.css into packages/vscode/media and intellij
 npm test           # vitest (engine + contract)
 ```
 
+## VS Code extension
+
+The engine bundle must be present in `packages/vscode/media/` (run `npm run build && npm run sync`).
+
+```bash
+# Run it from source in a sandbox VS Code window (Extension Development Host):
+code --extensionDevelopmentPath="$PWD/packages/vscode" .
+# Then open the "Git Swimlanes" view from the activity bar.
+
+# Or package and install a .vsix:
+npm run package --workspace git-swimlanes-vscode   # → packages/vscode/git-swimlanes-vscode-0.0.0.vsix
+code --install-extension packages/vscode/git-swimlanes-vscode-0.0.0.vsix
+```
+
+The extension is fully bundled by `tsup`, so packaging uses `vsce package --no-dependencies`
+(it must not walk the npm workspace tree). The webview loads `media/engine.js` + `media/engine.css`
+under a strict CSP; `media/bridge.js` connects it to the extension host via `acquireVsCodeApi`.
+
 ## IntelliJ plugin (one-time bootstrap)
 
 Requires **JDK 17** (e.g. Eclipse Temurin). The Gradle wrapper jar is not committed; generate it once:
@@ -35,5 +53,12 @@ The plugin loads the engine bundle from `src/main/resources/web/`, populated by 
 
 ## Status
 
-Scaffolding. Engine algorithms and host wiring are stubs marked `// TODO (spec §x.y)`.
-See `docs/superpowers/plans/` for the implementation plan.
+- **Engine** — complete and tested (67 tests, TDD): model layer (parse, swimlanes, PR
+  detection, colors, layout, diff classification), React UI (graph, rows, accordion, diff
+  modal), and the webview message controller. Browser-verified.
+- **VS Code host** — wired end-to-end: builds, syncs the engine bundle, packages to `.vsix`.
+  Webview integration (ready handshake + diff round-trip) verified against the real `bridge.js`.
+- **IntelliJ host** — scaffolded (Kotlin/JCEF), not yet implemented; needs JDK 17 (see above).
+
+See `docs/superpowers/plans/` for the original implementation plan and
+`docs/git-swimlanes-*.md` for the functional specs.
