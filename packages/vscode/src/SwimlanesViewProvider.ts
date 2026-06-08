@@ -77,6 +77,15 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         this.git.setCwd(msg.id);
         await this.refresh();
         break;
+      case "fetchPullRefs":
+        try {
+          await this.git.fetchPullRefs();
+          await this.refresh();
+          void vscode.window.showInformationMessage("Git Swimlanes: ref delle pull request scaricati.");
+        } catch (e) {
+          void vscode.window.showWarningMessage(`Git Swimlanes: fetch PR fallito — ${String(e)}`);
+        }
+        break;
     }
   }
 

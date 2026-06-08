@@ -1,5 +1,7 @@
 package io.github.michelepolo.gitswimlanes
 
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
@@ -129,7 +131,22 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
         git.setRepo(msg.id!!)
         refresh()
       }
+      "fetchPullRefs" -> runOnPooled {
+        try {
+          git.fetchPullRefs()
+          refresh()
+        } catch (e: Exception) {
+          onEdt { notifyWarn("Fetch PR fallito: ${e.message}") }
+        }
+      }
     }
+  }
+
+  private fun notifyWarn(message: String) {
+    NotificationGroupManager.getInstance()
+      .getNotificationGroup("Git Swimlanes")
+      .createNotification(message, NotificationType.WARNING)
+      .notify(project)
   }
 
   /**

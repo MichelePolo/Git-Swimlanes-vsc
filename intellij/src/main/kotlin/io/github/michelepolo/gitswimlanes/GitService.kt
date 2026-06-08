@@ -51,6 +51,32 @@ class GitService(private val project: Project) {
     return rawGit(listOf("show", "-M", hash, "--", path))
   }
 
+  /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). Uses git's creds. */
+  fun fetchPullRefs() {
+    val remote = remoteName()
+    val url = rawGit(listOf("remote", "get-url", remote)).trim()
+    val refspec = pullRefspecFor(url) ?: throw IllegalStateException("Forge non riconosciuta dal remote: $url")
+    rawGit(listOf("fetch", remote, refspec))
+  }
+
+  private fun remoteName(): String {
+    val remotes = rawGit(listOf("remote")).split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+    if (remotes.isEmpty()) throw IllegalStateException("Nessun remote configurato")
+    return if (remotes.contains("origin")) "origin" else remotes.first()
+  }
+
+  /** Mirrors engine src/forge.ts (cross-language boundary). */
+  private fun pullRefspecFor(remoteUrl: String): String? {
+    val u = remoteUrl.lowercase()
+    return when {
+      u.contains("github.com") -> "+refs/pull/*/head:refs/remotes/origin/pr/*"
+      u.contains("dev.azure.com") || u.contains("visualstudio.com") -> "+refs/pull/*/merge:refs/remotes/origin/pr/*"
+      u.contains("gitlab") -> "+refs/merge-requests/*/head:refs/remotes/origin/mr/*"
+      u.contains("bitbucket.org") -> "+refs/pull-requests/*/from:refs/remotes/origin/pr/*"
+      else -> null
+    }
+  }
+
   private fun rawGit(args: List<String>): String {
     val cmd = GeneralCommandLine(listOf("git") + args)
       .withWorkDirectory(repoRoot())
