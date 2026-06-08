@@ -12,23 +12,42 @@ import "./engine.css";
  * freeze the UI), falling back to synchronous parsing where Worker is unavailable. See §9.
  */
 function createParser(): (log: string) => Promise<CommitNode[]> {
-  if (typeof Worker === "undefined") {
-    return (log) => Promise.resolve(parseLog(log).commits);
+  const sync = (log: string): Promise<CommitNode[]> => Promise.resolve(parseLog(log).commits);
+  if (typeof Worker === "undefined") return sync;
+
+  let worker: Worker;
+  try {
+    const url = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
+    worker = new Worker(url);
+  } catch {
+    return sync; // Blob/Worker construction blocked → parse on the main thread
   }
-  const url = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
-  const worker = new Worker(url);
+
   let seq = 0;
-  const pending = new Map<number, (commits: CommitNode[]) => void>();
+  let dead = false;
+  const pending = new Map<number, { resolve: (commits: CommitNode[]) => void; log: string }>();
+  // If the worker errors at runtime, settle every in-flight request synchronously so the
+  // UI never wedges, and route all future parses to the main thread.
+  const fallbackAll = (): void => {
+    dead = true;
+    for (const { resolve, log } of pending.values()) resolve(parseLog(log).commits);
+    pending.clear();
+  };
   worker.onmessage = (e: MessageEvent<{ id: number; commits: CommitNode[] }>) => {
-    pending.get(e.data.id)?.(e.data.commits);
+    pending.get(e.data.id)?.resolve(e.data.commits);
     pending.delete(e.data.id);
   };
-  return (log) =>
-    new Promise<CommitNode[]>((resolve) => {
+  worker.onerror = fallbackAll;
+  worker.onmessageerror = fallbackAll;
+
+  return (log) => {
+    if (dead) return sync(log);
+    return new Promise<CommitNode[]>((resolve) => {
       const id = ++seq;
-      pending.set(id, resolve);
+      pending.set(id, { resolve, log });
       worker.postMessage({ id, log });
     });
+  };
 }
 
 /** Persisted webview UI state (VS Code getState/setState). */

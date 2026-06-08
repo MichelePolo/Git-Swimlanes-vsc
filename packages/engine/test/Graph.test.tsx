@@ -77,4 +77,20 @@ describe("Graph (spec §5.1)", () => {
     // The single same-lane edge is m1→m0 (first-parent), so it carries main's color.
     expect(container.querySelector("line.edge")!.getAttribute("stroke")).toBe(colorFor("main"));
   });
+
+  it("keeps an edge that spans the window even when both endpoints are outside it", () => {
+    // c0 is a merge whose 2nd parent is c8: a long edge from row 0 to row 8.
+    const SPAN = [
+      "c0|c1 c8|HEAD -> main|A|2024-01-10|merge",
+      "c1|c2||A|2024-01-09|c1", "c2|c3||A|2024-01-08|c2", "c3|c4||A|2024-01-07|c3",
+      "c4|c5||A|2024-01-06|c4", "c5|c6||A|2024-01-05|c5", "c6|c7||A|2024-01-04|c6",
+      "c7|c8||A|2024-01-03|c7", "c8|c9||A|2024-01-02|c8", "c9|||A|2024-01-01|c9",
+    ].join("\n");
+    const { commits, byHash } = parseLog(SPAN);
+    const model = assignLanes(commits, byHash);
+    const offsets = computeOffsets(model, new Set());
+    const { container } = render(<Graph model={model} offsets={offsets} range={[4, 7]} />);
+    // Rows 0 and 8 are off-window, but the c0→c8 edge crosses rows 4..6, so it must render.
+    expect(container.querySelector('[data-edge="c0-c8"]')).not.toBeNull();
+  });
 });

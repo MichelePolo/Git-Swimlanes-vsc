@@ -33,6 +33,13 @@ export function Graph({
     const r = model.rowOf[hash];
     return r >= rFirst && r < rLast;
   };
+  // An edge is visible if its row span intersects the window — not only if an endpoint is
+  // inside it, so long connectors that cross a scrolled-past region still render.
+  const edgeInWindow = (a: string, b: string): boolean => {
+    const ra = model.rowOf[a];
+    const rb = model.rowOf[b];
+    return Math.min(ra, rb) < rLast && Math.max(ra, rb) >= rFirst;
+  };
 
   const guides = showLaneGuides
     ? model.laneNames.map((name, i) => (
@@ -56,14 +63,24 @@ export function Graph({
     const cy = dotY(model.rowOf[c.hash]);
     c.parents.forEach((p, idx) => {
       if (!(p in model.byHash)) return; // parent absent (e.g. shallow clone) → omit edge
-      if (!inWindow(c.hash) && !inWindow(p)) return; // edge entirely outside the window
+      if (!edgeInWindow(c.hash, p)) return; // edge does not intersect the visible window
       const px = laneX(model.laneOf[p]);
       const py = dotY(model.rowOf[p]);
       // first-parent → child's color (continuity); other parents → parent's color (merge).
       const col = idx === 0 ? color(model.branchOf[c.hash]) : color(model.branchOf[p]);
       if (cx === px) {
         edges.push(
-          <line key={`${c.hash}-${p}`} className="edge" x1={cx} y1={cy} x2={px} y2={py} stroke={col} strokeWidth={2} />,
+          <line
+            key={`${c.hash}-${p}`}
+            className="edge"
+            data-edge={`${c.hash}-${p}`}
+            x1={cx}
+            y1={cy}
+            x2={px}
+            y2={py}
+            stroke={col}
+            strokeWidth={2}
+          />,
         );
       } else {
         const my = (cy + py) / 2;
@@ -71,6 +88,7 @@ export function Graph({
           <path
             key={`${c.hash}-${p}`}
             className="edge"
+            data-edge={`${c.hash}-${p}`}
             d={`M ${cx} ${cy} C ${cx} ${my}, ${px} ${my}, ${px} ${py}`}
             fill="none"
             stroke={col}
