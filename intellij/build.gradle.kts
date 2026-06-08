@@ -28,6 +28,20 @@ kotlin {
   jvmToolchain(17)
 }
 
+// Compatibility range for the built plugin. We compile against the 2024.1 (241) baseline but
+// only use long-lived platform APIs (ToolWindow, JBCef, git4idea), so rely on JetBrains'
+// forward-compatibility and drop the upper bound — the plugin then installs on 2024.1 and every
+// later release (2025.x, 2026.x, …) without rebuilding. Without this, buildPlugin pins
+// until-build to "241.*" and newer IDEs reject the plugin as incompatible.
+intellijPlatform {
+  pluginConfiguration {
+    ideaVersion {
+      sinceBuild = "241"
+      untilBuild = provider { null }
+    }
+  }
+}
+
 tasks.test {
   useJUnit()
 }
