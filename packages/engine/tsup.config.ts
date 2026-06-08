@@ -19,5 +19,8 @@ export default defineConfig([
     clean: false,
     noExternal: [/.*/], // bundle React + everything for a standalone <script>
     injectStyle: false, // emit engine.css as a sibling file, loaded via <link>
+    // Webviews have no Node globals: inline NODE_ENV so React's process.env
+    // checks don't throw "process is not defined" at runtime.
+    define: { "process.env.NODE_ENV": JSON.stringify("production") },
   },
 ]);
