@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.ui.JBColor
 import git4idea.repo.GitRepositoryManager
 import com.intellij.ui.jcef.JBCefBrowser
@@ -106,10 +107,18 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     }
   }
 
-  /** Open the current working-tree file in the editor (engine "openFile"). */
+  /**
+   * Open the current working-tree file in the editor (engine "openFile").
+   *
+   * The path is untrusted (derived from git log content): reject absolute paths and `..`
+   * segments, and confirm the resolved file is a descendant of the repo root before opening.
+   */
   private fun openInEditor(relPath: String) {
+    val normalized = relPath.replace('\\', '/')
+    if (normalized.startsWith("/") || normalized.split("/").contains("..")) return
     val root = GitRepositoryManager.getInstance(project).repositories.firstOrNull()?.root ?: return
-    val file = root.findFileByRelativePath(relPath) ?: return
+    val file = root.findFileByRelativePath(normalized) ?: return
+    if (!VfsUtilCore.isAncestor(root, file, false)) return
     FileEditorManager.getInstance(project).openFile(file, true)
   }
 

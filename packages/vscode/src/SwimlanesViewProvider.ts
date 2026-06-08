@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import * as path from "node:path";
+import * as fs from "node:fs";
 import type { Host2Wv, Wv2Host } from "@michelepolo/git-swimlanes-contract";
 import { GitService } from "./GitService.js";
 import { buildHtml } from "./html.js";
@@ -52,11 +54,21 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  /** Open the current working-tree file in the editor (engine "openFile"). */
+  /**
+   * Open the current working-tree file in the editor (engine "openFile").
+   *
+   * The path comes from the webview (derived from git log content), so it is treated as
+   * untrusted: reject absolute paths and `..` segments, then confirm the resolved realpath
+   * stays inside the repo root before opening (defends against traversal and symlink escape).
+   */
   private async openFile(relPath: string): Promise<void> {
-    const uri = vscode.Uri.joinPath(vscode.Uri.file(this.repoRoot), relPath);
+    const normalized = path.normalize(relPath);
+    if (path.isAbsolute(normalized) || normalized.split(path.sep).includes("..")) return;
     try {
-      await vscode.window.showTextDocument(uri, { preview: false });
+      const full = path.resolve(this.repoRoot, normalized);
+      const [real, realRoot] = await Promise.all([fs.promises.realpath(full), fs.promises.realpath(this.repoRoot)]);
+      if (real !== realRoot && !real.startsWith(realRoot + path.sep)) return;
+      await vscode.window.showTextDocument(vscode.Uri.file(real), { preview: false });
     } catch {
       void vscode.window.showWarningMessage(`Git Swimlanes: impossibile aprire ${relPath}`);
     }
