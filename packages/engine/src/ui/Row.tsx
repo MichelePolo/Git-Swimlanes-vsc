@@ -1,5 +1,6 @@
 import type { CommitNode, FileChange, PullRequestRef } from "@michelepolo/git-swimlanes-contract";
 import { colorFor } from "../model/color.js";
+import { LAYOUT, panelHeight } from "../layout.js";
 
 export interface RowProps {
   commit: CommitNode;
@@ -31,6 +32,7 @@ export function Row({ commit, pr, expanded, onToggle, onFileSelect }: RowProps):
       <div
         className={`crow${expanded ? " open" : ""}`}
         data-hash={commit.hash}
+        style={{ height: LAYOUT.rowH }}
         role="button"
         tabIndex={0}
         onClick={onToggle}
@@ -67,7 +69,7 @@ export function Row({ commit, pr, expanded, onToggle, onFileSelect }: RowProps):
       </div>
 
       {expanded && (
-        <div className="files">
+        <div className="files" style={{ height: panelHeight(commit) }}>
           {nf === 0 ? (
             <div className="fempty">
               Nessun file elencato. Se è un merge, Git non mostra il diff di default;
