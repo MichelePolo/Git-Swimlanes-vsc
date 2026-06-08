@@ -63,4 +63,17 @@ describe("webview controller (host↔engine routing)", () => {
     ctrl.receive({ type: "theme", theme: { laneSaturation: 68, laneLightness: 60 } });
     expect((states.at(-1) as { theme: { laneLightness: number } }).theme).toMatchObject({ laneLightness: 60 });
   });
+
+  it("stores repos and current on a repos message", () => {
+    const { ctrl, states } = setup();
+    ctrl.receive({ type: "repos", repos: [{ id: "/a", label: "a" }, { id: "/b", label: "b" }], current: "/a" });
+    expect(states.at(-1)).toMatchObject({ repos: [{ id: "/a", label: "a" }, { id: "/b", label: "b" }], currentRepo: "/a" });
+  });
+
+  it("preserves repos across a setLog (a refresh must not drop the selector)", () => {
+    const { ctrl, states } = setup();
+    ctrl.receive({ type: "repos", repos: [{ id: "/a", label: "a" }], current: "/a" });
+    ctrl.receive({ type: "setLog", log: "LOG" });
+    expect(states.at(-1)).toMatchObject({ log: "LOG", repos: [{ id: "/a", label: "a" }], currentRepo: "/a" });
+  });
 });

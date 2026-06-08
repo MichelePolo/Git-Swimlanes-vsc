@@ -3,6 +3,7 @@ import type {
   DiffRequest,
   DiffResult,
   Host2Wv,
+  RepoRef,
   Theme,
   Wv2Host,
 } from "@michelepolo/git-swimlanes-contract";
@@ -17,6 +18,8 @@ export interface ViewState {
   log?: string;
   commits?: CommitNode[];
   theme?: Theme;
+  repos?: RepoRef[];
+  currentRepo?: string;
 }
 
 export interface Controller {
@@ -55,13 +58,16 @@ export function createController(host: HostBridge, onState: (s: ViewState) => vo
     receive(msg: Host2Wv): void {
       switch (msg.type) {
         case "init":
-          emit({ commits: msg.commits, theme: msg.theme });
+          emit({ ...state, commits: msg.commits, log: undefined, theme: msg.theme });
           break;
         case "setLog":
-          emit({ log: msg.log, theme: state.theme });
+          emit({ ...state, log: msg.log, commits: undefined });
           break;
         case "theme":
           emit({ ...state, theme: msg.theme });
+          break;
+        case "repos":
+          emit({ ...state, repos: msg.repos, currentRepo: msg.current });
           break;
         case "diffResult": {
           const p = pending.get(msg.reqId);

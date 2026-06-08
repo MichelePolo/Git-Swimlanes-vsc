@@ -7,12 +7,12 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.ui.JBColor
-import git4idea.repo.GitRepositoryManager
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
 import git4idea.repo.GitRepository
+import git4idea.repo.GitRepositoryChangeListener
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -79,6 +79,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     try {
       val log = git.log()
       val dark = !JBColor.isBright()
+      val repos = git.repos()
       onEdt {
         postToWebview(mapOf("type" to "setLog", "log" to log))
         // Lane lightness + base colors follow the IDE theme (JCEF inherits nothing).
@@ -95,6 +96,15 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
             ),
           ),
         )
+        if (repos.size > 1) {
+          postToWebview(
+            mapOf(
+              "type" to "repos",
+              "repos" to repos.map { mapOf("id" to it.first, "label" to it.second) },
+              "current" to git.currentRootPath(),
+            ),
+          )
+        }
       }
     } catch (e: Exception) {
       onEdt { postToWebview(mapOf("type" to "diffError", "reqId" to "*", "message" to (e.message ?: "git error"))) }
@@ -115,6 +125,10 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
       }
       "openFile" -> onEdt { openInEditor(msg.path!!) }
       "commitSelected" -> Unit // handled (no host action defined yet); the engine shows it
+      "selectRepo" -> {
+        git.setRepo(msg.id!!)
+        refresh()
+      }
     }
   }
 
@@ -127,7 +141,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
   private fun openInEditor(relPath: String) {
     val normalized = relPath.replace('\\', '/')
     if (normalized.startsWith("/") || normalized.split("/").contains("..")) return
-    val root = GitRepositoryManager.getInstance(project).repositories.firstOrNull()?.root ?: return
+    val root = git.currentRepoRoot() ?: return
     val file = root.findFileByRelativePath(normalized) ?: return
     if (!VfsUtilCore.isAncestor(root, file, false)) return
     FileEditorManager.getInstance(project).openFile(file, true)
@@ -154,7 +168,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
   private fun subscribeRepoChanges(parent: Disposable) {
     project.messageBus.connect(parent).subscribe(
       GitRepository.GIT_REPO_CHANGE,
-      git4idea.repo.GitRepositoryChangeListener { refresh() },
+      GitRepositoryChangeListener { refresh() },
     )
   }
 

@@ -104,6 +104,27 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     expect(onExpandedChange).toHaveBeenLastCalledWith([]);
   });
 
+  it("shows a repo selector for multiple repos and reports selection", () => {
+    const onSelectRepo = vi.fn();
+    render(
+      <GitSwimlanes
+        commits={commits}
+        repos={[{ id: "/a", label: "repo-a" }, { id: "/b", label: "repo-b" }]}
+        currentRepo="/a"
+        onSelectRepo={onSelectRepo}
+      />,
+    );
+    const select = screen.getByRole("combobox");
+    expect(screen.getByText("repo-a")).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: "/b" } });
+    expect(onSelectRepo).toHaveBeenCalledWith("/b");
+  });
+
+  it("omits the repo selector for a single repo", () => {
+    render(<GitSwimlanes commits={commits} repos={[{ id: "/a", label: "repo-a" }]} currentRepo="/a" />);
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
   it("suppresses PR badges when detectPullRequests is false", () => {
     const on = render(<GitSwimlanes commits={commits} />);
     expect(on.container.querySelectorAll(".pill.pr")).toHaveLength(1); // m1 has a PR subject

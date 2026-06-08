@@ -29,6 +29,23 @@
   font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* ── repo selector (multi-repo workspaces) ──────────────────────────── */
+.sw-toolbar {
+  flex: none;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.repo-select {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--txt);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
 /* ── lane header (persistent rotated labels, spec §1/§5.1) ───────────── */
 .sw-head {
   display: flex;
