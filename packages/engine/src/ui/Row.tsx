@@ -9,6 +9,8 @@ export interface RowProps {
   expanded: boolean;
   onToggle: () => void;
   onFileSelect: (file: FileChange) => void;
+  /** Branch → color (theme-aware); defaults to the dark-tuned colorFor. */
+  color?: (name: string) => string;
 }
 
 /** Color + human label for a file-status code (engine spec §5.2). */
@@ -25,7 +27,7 @@ function fileStatus(code: string): { label: string; color: string } {
 }
 
 /** One commit row with its expandable file panel. See engine spec §5.2. */
-export function Row({ commit, pr, expanded, onToggle, onFileSelect }: RowProps): JSX.Element {
+export function Row({ commit, pr, expanded, onToggle, onFileSelect, color = colorFor }: RowProps): JSX.Element {
   const nf = commit.files.length;
   return (
     <div className="cwrap">
@@ -53,7 +55,7 @@ export function Row({ commit, pr, expanded, onToggle, onFileSelect }: RowProps):
             <span
               key={b}
               className={`pill branch${isHead ? " head" : ""}`}
-              style={{ background: colorFor(norm), color: "#0c1016" }}
+              style={{ background: color(norm), color: "#0c1016" }}
             >
               {b}
             </span>

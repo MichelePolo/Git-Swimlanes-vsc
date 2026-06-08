@@ -8,13 +8,15 @@ export interface GraphProps {
   /** Hashes that carry a detected PR (drawn with a halo). */
   prHashes?: Set<string>;
   showLaneGuides?: boolean;
+  /** Branch → color (theme-aware); defaults to the dark-tuned colorFor. */
+  color?: (name: string) => string;
 }
 
 /**
  * The SVG history graph: lane guides, parent edges, and commit nodes. See spec §5.1.
  * Vertical positions come from `offsets` (shared with the rows so they stay aligned).
  */
-export function Graph({ model, offsets, prHashes, showLaneGuides = true }: GraphProps): JSX.Element {
+export function Graph({ model, offsets, prHashes, showLaneGuides = true, color = colorFor }: GraphProps): JSX.Element {
   const { dotY, totalH } = offsets;
   const pr = prHashes ?? new Set<string>();
 
@@ -27,7 +29,7 @@ export function Graph({ model, offsets, prHashes, showLaneGuides = true }: Graph
           y1={0}
           x2={laneX(i)}
           y2={totalH}
-          stroke={colorFor(name)}
+          stroke={color(name)}
           strokeWidth={1}
           opacity={0.07}
         />
@@ -43,7 +45,7 @@ export function Graph({ model, offsets, prHashes, showLaneGuides = true }: Graph
       const px = laneX(model.laneOf[p]);
       const py = dotY(model.rowOf[p]);
       // first-parent → child's color (continuity); other parents → parent's color (merge).
-      const col = idx === 0 ? colorFor(model.branchOf[c.hash]) : colorFor(model.branchOf[p]);
+      const col = idx === 0 ? color(model.branchOf[c.hash]) : color(model.branchOf[p]);
       if (cx === px) {
         edges.push(
           <line key={`${c.hash}-${p}`} className="edge" x1={cx} y1={cy} x2={px} y2={py} stroke={col} strokeWidth={2} />,
@@ -68,7 +70,7 @@ export function Graph({ model, offsets, prHashes, showLaneGuides = true }: Graph
   for (const c of model.commits) {
     const x = laneX(model.laneOf[c.hash]);
     const y = dotY(model.rowOf[c.hash]);
-    const col = colorFor(model.branchOf[c.hash]);
+    const col = color(model.branchOf[c.hash]);
     if (pr.has(c.hash)) {
       nodes.push(
         <circle

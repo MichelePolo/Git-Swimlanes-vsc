@@ -14,6 +14,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(
     vscode.window.registerWebviewViewProvider(SwimlanesViewProvider.viewId, provider),
     vscode.commands.registerCommand("gitSwimlanes.refresh", () => provider.refresh()),
+    vscode.window.onDidChangeActiveColorTheme(() => provider.postTheme()),
   );
 }
 
