@@ -72,7 +72,8 @@ export type Wv2Host =
   | { type: "requestDiff"; reqId: string; hash: string; path: string; oldPath?: string }
   | { type: "commitSelected"; hash: string }
   | { type: "openFile"; path: string; hash: string }
-  | { type: "selectRepo"; id: string };
+  | { type: "selectRepo"; id: string }
+  | { type: "fetchPullRefs" };
 
 /** Host → Webview. */
 export type Host2Wv =

@@ -21,6 +21,7 @@
   <idea-version since-build="233"/>
 
   <extensions defaultExtensionNs="com.intellij">
+    <notificationGroup id="Git Swimlanes" displayType="BALLOON"/>
     <toolWindow id="Git Swimlanes"
                 anchor="bottom"
                 icon="AllIcons.Vcs.Branch"

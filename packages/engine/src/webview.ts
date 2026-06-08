@@ -69,6 +69,7 @@ function boot(): void {
         repos: state.repos,
         currentRepo: state.currentRepo,
         onSelectRepo: (id) => host.post({ type: "selectRepo", id }),
+        onFetchPullRefs: () => host.post({ type: "fetchPullRefs" }),
       }),
     );
   }

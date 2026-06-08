@@ -7,4 +7,5 @@ export { colorFor, hueFromName } from "./model/color.js";
 export { LAYOUT, laneX, panelHeight, computeOffsets } from "./layout.js";
 export { classifyDiffLine } from "./diff.js";
 export type { DiffLineKind } from "./diff.js";
+export { pullRefspecFor } from "./forge.js";
 export type * from "@michelepolo/git-swimlanes-contract";

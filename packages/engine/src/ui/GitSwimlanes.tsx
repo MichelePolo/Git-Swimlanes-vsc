@@ -38,6 +38,8 @@ export interface GitSwimlanesProps {
   repos?: RepoRef[];
   currentRepo?: string;
   onSelectRepo?(id: string): void;
+  /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). */
+  onFetchPullRefs?(): void;
 }
 
 const DEFAULTS: Required<SwimlanesOptions> = {
@@ -70,6 +72,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     repos,
     currentRepo,
     onSelectRepo,
+    onFetchPullRefs,
   } = props;
   const opts = { ...DEFAULTS, ...options };
 
@@ -161,20 +164,33 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   return (
     <div className="git-swimlanes">
-      {repos && repos.length > 1 && (
+      {(onFetchPullRefs || (repos && repos.length > 1)) && (
         <div className="sw-toolbar">
-          <select
-            className="repo-select"
-            aria-label="Repository"
-            value={currentRepo ?? ""}
-            onChange={(e) => onSelectRepo?.(e.target.value)}
-          >
-            {repos.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          {repos && repos.length > 1 && (
+            <select
+              className="repo-select"
+              aria-label="Repository"
+              value={currentRepo ?? ""}
+              onChange={(e) => onSelectRepo?.(e.target.value)}
+            >
+              {repos.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {onFetchPullRefs && (
+            <button
+              type="button"
+              className="sw-btn"
+              aria-label="Scarica i ref delle pull request"
+              title="Scarica i ref delle pull request"
+              onClick={onFetchPullRefs}
+            >
+              ⤓ Pull request
+            </button>
+          )}
         </div>
       )}
       <div className="sw-head">

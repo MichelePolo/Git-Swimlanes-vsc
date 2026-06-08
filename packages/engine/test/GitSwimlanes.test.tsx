@@ -125,6 +125,13 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 
+  it("shows a fetch-PRs button that calls onFetchPullRefs", () => {
+    const onFetchPullRefs = vi.fn();
+    render(<GitSwimlanes commits={commits} onFetchPullRefs={onFetchPullRefs} />);
+    fireEvent.click(screen.getByRole("button", { name: /scarica i ref delle pull request/i }));
+    expect(onFetchPullRefs).toHaveBeenCalledTimes(1);
+  });
+
   it("suppresses PR badges when detectPullRequests is false", () => {
     const on = render(<GitSwimlanes commits={commits} />);
     expect(on.container.querySelectorAll(".pill.pr")).toHaveLength(1); // m1 has a PR subject
