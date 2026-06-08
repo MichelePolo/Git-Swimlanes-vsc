@@ -1,5 +1,7 @@
 package io.github.michelepolo.gitswimlanes
 
+import com.google.gson.Gson
+
 // Mirror of packages/contract/src/index.ts (canonical source).
 // Kept by hand: a JVM host cannot import TypeScript types.
 
@@ -13,10 +15,11 @@ data class WvMessage(
 )
 
 object Json {
-  // TODO (intellij spec §3): decode(request) / encode(msg) via the platform JSON util.
-  fun decode(@Suppress("UNUSED_PARAMETER") request: String): WvMessage =
-    throw NotImplementedError("Json.decode — see git-swimlanes-intellij-spec.md §3")
+  private val gson = Gson()
 
-  fun encode(@Suppress("UNUSED_PARAMETER") msg: Any): String =
-    throw NotImplementedError("Json.encode — see git-swimlanes-intellij-spec.md §3")
+  /** Parse a Webview → Host message. Unknown fields are ignored. */
+  fun decode(request: String): WvMessage = gson.fromJson(request, WvMessage::class.java)
+
+  /** Serialize a Host → Webview message (a map or data object) to JSON. */
+  fun encode(msg: Any): String = gson.toJson(msg)
 }
