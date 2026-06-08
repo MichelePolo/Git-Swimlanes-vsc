@@ -32,13 +32,13 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@michelepolo/git-swimlanes-contract": "*"
+    "typecheck": "tsc --noEmit",
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
+    "@michelepolo/git-swimlanes-contract": "*",
     "@types/vscode": "1.85.0",
+    "@vscode/vsce": "3.9.2",
     "tsup": "8.5.1"
   }
 }
