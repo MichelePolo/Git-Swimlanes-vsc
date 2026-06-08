@@ -8,16 +8,26 @@ version = "0.0.0"
 
 repositories {
   mavenCentral()
-  intellijPlatform { defaultRepositories() }
+  intellijPlatform {
+    defaultRepositories()
+    intellijDependencies()
+  }
 }
 
 dependencies {
   intellijPlatform {
     intellijIdeaCommunity("2024.1")
     bundledPlugin("Git4Idea")
+    instrumentationTools()
+    testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
   }
+  testImplementation("junit:junit:4.13.2")
 }
 
 kotlin {
   jvmToolchain(17)
+}
+
+tasks.test {
+  useJUnit()
 }
