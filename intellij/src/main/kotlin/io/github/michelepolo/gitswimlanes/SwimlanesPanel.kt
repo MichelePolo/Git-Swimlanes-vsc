@@ -68,13 +68,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
   private fun loadEngine() {
     val css = readResource("/web/engine.css")
     val js = readResource("/web/engine.js")
-    browser.loadHTML(
-      """
-      <!DOCTYPE html>
-      <html lang="it"><head><meta charset="utf-8"><style>$css</style></head>
-      <body><div id="app"></div><script>$js</script></body></html>
-      """.trimIndent(),
-    )
+    browser.loadHTML(buildEngineHtml(css, js))
   }
 
   fun refresh() = runOnPooled {
