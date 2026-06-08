@@ -3,6 +3,18 @@
   <name>Git Swimlanes</name>
   <vendor email="michele.polo@gmail.com">michelepolo</vendor>
 
+  <description><![CDATA[
+    Deterministic Git history visualizer. Renders branches as stable, labeled swimlanes
+    whose colors are a pure function of the branch name — the same branch is always the
+    same color, in every repository and on every render. Detects pull/merge requests from
+    commit messages (Azure DevOps, GitHub, GitLab, Bitbucket, squash), shows per-commit
+    file changes, and opens a colored diff for any file on click.
+  ]]></description>
+
+  <change-notes><![CDATA[
+    <ul><li>0.0.0 — initial release: swimlane graph, PR detection, per-file diff viewer.</li></ul>
+  ]]></change-notes>
+
   <depends>com.intellij.modules.platform</depends>
   <depends>Git4Idea</depends>
 

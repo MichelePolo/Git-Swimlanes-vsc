@@ -12,6 +12,7 @@ import git4idea.repo.GitRepository
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import java.util.Base64
 import javax.swing.JComponent
 
 /**
@@ -102,12 +103,20 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     }
   }
 
-  /** Java -> JS: deliver a message to the engine. */
+  /**
+   * Java -> JS: deliver a message to the engine.
+   *
+   * The JSON is base64-encoded rather than escaped into a JS string literal: the base64
+   * alphabet is ASCII-safe (no quotes, no line terminators such as U+2028/U+2029), so it
+   * cannot break out of the literal or inject code. TextDecoder reconstructs the UTF-8
+   * string (preserving accented authors/paths) before JSON.parse.
+   */
   private fun postToWebview(msg: Any) {
     val json = Json.encode(msg)
-    val esc = json.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "")
+    val b64 = Base64.getEncoder().encodeToString(json.toByteArray(Charsets.UTF_8))
     browser.cefBrowser.executeJavaScript(
-      "window.GitSwimlanes && window.GitSwimlanes.receive(JSON.parse('$esc'));",
+      "window.GitSwimlanes && window.GitSwimlanes.receive(" +
+        "JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('$b64'), function(c){return c.charCodeAt(0);}))));",
       browser.cefBrowser.url, 0,
     )
   }
