@@ -76,4 +76,17 @@ describe("webview controller (host↔engine routing)", () => {
     ctrl.receive({ type: "setLog", log: "LOG" });
     expect(states.at(-1)).toMatchObject({ log: "LOG", repos: [{ id: "/a", label: "a" }], currentRepo: "/a" });
   });
+
+  it("stores viewConfig from a viewConfig message", () => {
+    const { ctrl, states } = setup();
+    ctrl.receive({ type: "viewConfig", config: { pinned: ["main"], hidden: ["x"] } });
+    expect(states.at(-1)).toMatchObject({ viewConfig: { pinned: ["main"], hidden: ["x"] } });
+  });
+
+  it("preserves viewConfig across a setLog", () => {
+    const { ctrl, states } = setup();
+    ctrl.receive({ type: "viewConfig", config: { pinned: ["main"], hidden: [] } });
+    ctrl.receive({ type: "setLog", log: "LOG" });
+    expect(states.at(-1)).toMatchObject({ log: "LOG", viewConfig: { pinned: ["main"], hidden: [] } });
+  });
 });

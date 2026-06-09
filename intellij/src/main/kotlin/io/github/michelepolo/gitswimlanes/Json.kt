@@ -5,6 +5,11 @@ import com.google.gson.Gson
 // Mirror of packages/contract/src/index.ts (canonical source).
 // Kept by hand: a JVM host cannot import TypeScript types.
 
+data class ViewConfigDto(
+  val pinned: List<String> = emptyList(),
+  val hidden: List<String> = emptyList(),
+)
+
 /** Decoded Webview → Host message (only fields used by the host). */
 data class WvMessage(
   val type: String,
@@ -13,6 +18,7 @@ data class WvMessage(
   val path: String? = null,
   val oldPath: String? = null,
   val id: String? = null,
+  val config: ViewConfigDto? = null,
 )
 
 object Json {

@@ -5,6 +5,7 @@ import type {
   Host2Wv,
   RepoRef,
   Theme,
+  ViewConfig,
   Wv2Host,
 } from "@michelepolo/git-swimlanes-contract";
 
@@ -20,6 +21,7 @@ export interface ViewState {
   theme?: Theme;
   repos?: RepoRef[];
   currentRepo?: string;
+  viewConfig?: ViewConfig;
 }
 
 export interface Controller {
@@ -68,6 +70,9 @@ export function createController(host: HostBridge, onState: (s: ViewState) => vo
           break;
         case "repos":
           emit({ ...state, repos: msg.repos, currentRepo: msg.current });
+          break;
+        case "viewConfig":
+          emit({ ...state, viewConfig: msg.config });
           break;
         case "diffResult": {
           const p = pending.get(msg.reqId);

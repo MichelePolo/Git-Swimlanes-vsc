@@ -153,3 +153,22 @@
 .dline.del { background: rgba(224, 108, 117, .13); color: #f0a8ad; }
 .dline.hunk { color: #7b93ff; background: rgba(120, 150, 255, .08); }
 .dline.meta { color: var(--dim); }
+
+/* ── Branches panel (pin/hide) ──────────────────────────────────────── */
+.branch-panel {
+  flex: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel2);
+  padding: 4px 8px;
+}
+.brow { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 12px; }
+.brow .bname { flex: 1; font-family: "IBM Plex Mono", ui-monospace, monospace; white-space: nowrap; }
+.brow.absent .bname { font-style: italic; }
+.babsent { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+.btoggle {
+  border: 1px solid var(--line); background: transparent; border-radius: 5px;
+  padding: 0 5px; cursor: pointer; opacity: .55; line-height: 1.6;
+}
+.btoggle.on { opacity: 1; border-color: #7b93ff; background: #7b93ff22; }

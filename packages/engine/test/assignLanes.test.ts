@@ -72,4 +72,64 @@ describe("assignLanes (spec §4.3)", () => {
     const allHashes: string[] = m.commits.map((c: CommitNode) => c.hash);
     for (const h of allHashes) expect(typeof m.laneOf[h]).toBe("number");
   });
+
+  it("pins branches to the leftmost lanes in pin order", () => {
+    const m = assignLanes(parseLog(LOG).commits, parseLog(LOG).byHash, {
+      pinned: ["feature/login", "develop"],
+      hidden: [],
+    });
+    expect(m.laneNames[0]).toBe("feature/login");
+    expect(m.laneNames[1]).toBe("develop");
+    expect(m.laneNames[2]).toBe("main"); // unpinned follow the default order
+  });
+
+  it("collapses hidden branches into a single 'hidden' lane", () => {
+    const m = assignLanes(parseLog(LOG).commits, parseLog(LOG).byHash, {
+      pinned: [],
+      hidden: ["feature/login"],
+    });
+    expect(m.laneNames).not.toContain("feature/login");
+    expect(m.laneNames).toContain("hidden");
+    expect(m.branchOf["f1"]).toBe("hidden");
+  });
+
+  it("keeps the 'hidden' lane distinct from '(no branch ref)'", () => {
+    const m = assignLanes(parseLog(LOG).commits, parseLog(LOG).byHash, {
+      pinned: [],
+      hidden: ["feature/login"],
+    });
+    expect(m.laneNames).toContain("hidden");
+    expect(m.laneNames).toContain("(no branch ref)");
+    expect(m.laneNames.indexOf("hidden")).not.toBe(m.laneNames.indexOf("(no branch ref)"));
+  });
+
+  it("lets hide win when a branch is both pinned and hidden", () => {
+    const m = assignLanes(parseLog(LOG).commits, parseLog(LOG).byHash, {
+      pinned: ["feature/login"],
+      hidden: ["feature/login"],
+    });
+    expect(m.laneNames).not.toContain("feature/login");
+    expect(m.branchOf["f1"]).toBe("hidden");
+  });
+
+  it("ignores config names absent from the log", () => {
+    const m = assignLanes(parseLog(LOG).commits, parseLog(LOG).byHash, {
+      pinned: ["does/not/exist"],
+      hidden: ["also/absent"],
+    });
+    expect(m.laneNames[0]).toBe("main");
+  });
+
+  it("exposes every branch name in allBranches", () => {
+    const m = assignLanes(parseLog(LOG).commits, parseLog(LOG).byHash, { pinned: [], hidden: ["feature/login"] });
+    expect(m.allBranches).toEqual(expect.arrayContaining(["main", "develop", "feature/login"]));
+  });
+
+  it("is identical to the default when no config is passed (regression)", () => {
+    const { commits, byHash } = parseLog(LOG);
+    const a = assignLanes(commits, byHash);
+    const b = assignLanes(commits, byHash, { pinned: [], hidden: [] });
+    expect(a.laneNames).toEqual(b.laneNames);
+    expect(a.branchOf).toEqual(b.branchOf);
+  });
 });

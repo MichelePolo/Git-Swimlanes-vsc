@@ -119,6 +119,8 @@ function boot(): void {
         currentRepo: state.currentRepo,
         onSelectRepo: (id) => host.post({ type: "selectRepo", id }),
         onFetchPullRefs: () => host.post({ type: "fetchPullRefs" }),
+        viewConfig: state.viewConfig,
+        onViewConfigChange: (config) => host.post({ type: "setViewConfig", config }),
       }),
     );
   }

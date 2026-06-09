@@ -34,6 +34,8 @@ export interface LaneModel {
   nLanes: number;
   rowOf: Record<string, number>;
   graphW: number;
+  /** All branch names present (visible + hidden), for the Branches panel. */
+  allBranches: string[];
 }
 
 export interface DiffRequest { hash: string; path: string; oldPath?: string; }
@@ -64,6 +66,12 @@ export interface RepoRef {
   label: string;  // human-friendly name (e.g. folder name)
 }
 
+/** Per-repo view configuration (pin/hide branches). Names are normalized (no `origin/`). */
+export interface ViewConfig {
+  pinned: string[]; // branch names, in pin order (leftmost → right)
+  hidden: string[]; // branch names to collapse into the "hidden" lane
+}
+
 // ─── Host ↔ webview message protocol (vscode §2 / intellij §2) ────────────────
 
 /** Webview → Host. */
@@ -73,7 +81,8 @@ export type Wv2Host =
   | { type: "commitSelected"; hash: string }
   | { type: "openFile"; path: string; hash: string }
   | { type: "selectRepo"; id: string }
-  | { type: "fetchPullRefs" };
+  | { type: "fetchPullRefs" }
+  | { type: "setViewConfig"; config: ViewConfig };
 
 /** Host → Webview. */
 export type Host2Wv =
@@ -82,4 +91,5 @@ export type Host2Wv =
   | { type: "diffResult"; reqId: string; unified: string }
   | { type: "diffError"; reqId: string; message: string }
   | { type: "theme"; theme: Theme }
-  | { type: "repos"; repos: RepoRef[]; current: string };
+  | { type: "repos"; repos: RepoRef[]; current: string }
+  | { type: "viewConfig"; config: ViewConfig };

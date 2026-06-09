@@ -8,6 +8,7 @@ import type {
   RepoRef,
   SwimlanesOptions,
   Theme,
+  ViewConfig,
 } from "@michelepolo/git-swimlanes-contract";
 import { parseLog } from "../model/parseLog.js";
 import { assignLanes } from "../model/assignLanes.js";
@@ -18,6 +19,7 @@ import { Graph } from "./Graph.js";
 import { LaneHeader } from "./LaneHeader.js";
 import { Row } from "./Row.js";
 import { DiffModal, type DiffState } from "./DiffModal.js";
+import { BranchPanel } from "./BranchPanel.js";
 
 export interface GitSwimlanesProps {
   log?: string;
@@ -40,7 +42,12 @@ export interface GitSwimlanesProps {
   onSelectRepo?(id: string): void;
   /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). */
   onFetchPullRefs?(): void;
+  /** Pin/hide view config; drives lane ordering and the Branches panel. */
+  viewConfig?: ViewConfig;
+  onViewConfigChange?(config: ViewConfig): void;
 }
+
+const EMPTY_VIEW_CONFIG: ViewConfig = { pinned: [], hidden: [] };
 
 const DEFAULTS: Required<SwimlanesOptions> = {
   newestFirst: true,
@@ -73,16 +80,20 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     currentRepo,
     onSelectRepo,
     onFetchPullRefs,
+    viewConfig,
+    onViewConfigChange,
   } = props;
   const opts = { ...DEFAULTS, ...options };
+
+  const cfg = viewConfig ?? EMPTY_VIEW_CONFIG;
 
   // Topology runs once per input; expansion-independent.
   const model = useMemo(() => {
     const parsed = commitsProp
       ? { commits: commitsProp, byHash: Object.fromEntries(commitsProp.map((c) => [c.hash, c])) }
       : parseLog(log ?? "");
-    return assignLanes(parsed.commits, parsed.byHash);
-  }, [log, commitsProp]);
+    return assignLanes(parsed.commits, parsed.byHash, cfg);
+  }, [log, commitsProp, cfg]);
 
   const prByHash = useMemo(() => {
     const map: Record<string, PullRequestRef | null> = {};
@@ -126,6 +137,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     ? visibleRange(offsets.top, offsets.totalH, view.scrollTop, view.viewportH)
     : [0, n];
 
+  const [branchPanelOpen, setBranchPanelOpen] = useState(false);
   const [diff, setDiff] = useState<{ req: DiffRequest; state: DiffState } | null>(null);
   // A commit's diff for a path is immutable, so cache by hash:path across the session.
   const diffCache = useRef(new Map<string, DiffResult>());
@@ -166,7 +178,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   return (
     <div className="git-swimlanes">
-      {(onFetchPullRefs || (repos && repos.length > 1)) && (
+      {(onFetchPullRefs || onViewConfigChange || (repos && repos.length > 1)) && (
         <div className="sw-toolbar">
           {repos && repos.length > 1 && (
             <select
@@ -193,7 +205,21 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
               ⤓ Pull request
             </button>
           )}
+          {onViewConfigChange && (
+            <button
+              type="button"
+              className="sw-btn"
+              aria-label="Branches"
+              title="Pin / nascondi branch"
+              onClick={() => setBranchPanelOpen((v) => !v)}
+            >
+              ⛋ Branches
+            </button>
+          )}
         </div>
+      )}
+      {branchPanelOpen && onViewConfigChange && (
+        <BranchPanel allBranches={model.allBranches} config={cfg} onChange={onViewConfigChange} />
       )}
       <div className="sw-head">
         <LaneHeader model={model} color={color} />

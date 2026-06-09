@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import type { Host2Wv, RepoRef, Theme, Wv2Host } from "@michelepolo/git-swimlanes-contract";
+import type { Host2Wv, RepoRef, Theme, ViewConfig, Wv2Host } from "@michelepolo/git-swimlanes-contract";
 import { GitService } from "./GitService.js";
 import { buildHtml } from "./html.js";
 
@@ -42,6 +42,7 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
       this.postTheme();
       const repos = await this.listRepos();
       if (repos.length > 1) this.post({ type: "repos", repos, current: this.currentRoot });
+      this.post({ type: "viewConfig", config: this.loadViewConfig() });
     } catch (e) {
       void vscode.window.showErrorMessage(`Git Swimlanes: ${String(e)}`);
     }
@@ -93,6 +94,10 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         this.git.setCwd(msg.id);
         await this.refresh();
         break;
+      case "setViewConfig":
+        await this.ctx.workspaceState.update(this.viewConfigKey(), msg.config);
+        this.post({ type: "viewConfig", config: msg.config });
+        break;
       case "fetchPullRefs":
         try {
           await this.git.fetchPullRefs();
@@ -103,6 +108,14 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         }
         break;
     }
+  }
+
+  private viewConfigKey(): string {
+    return `gitSwimlanes.viewConfig::${this.currentRoot}`;
+  }
+
+  private loadViewConfig(): ViewConfig {
+    return this.ctx.workspaceState.get<ViewConfig>(this.viewConfigKey(), { pinned: [], hidden: [] });
   }
 
   /**
