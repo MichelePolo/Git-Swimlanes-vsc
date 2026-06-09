@@ -155,4 +155,21 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     fireEvent.click(screen.getByRole("button", { name: "nascondi feature/login" }));
     expect(onViewConfigChange).toHaveBeenCalledWith({ pinned: [], hidden: ["feature/login"] });
   });
+
+  it("shows the working-tree row when status is non-empty and hides it when empty", () => {
+    const { rerender, container } = render(<GitSwimlanes commits={commits} status="M  src/x.ts" />);
+    expect(screen.getByText(/Modifiche non committate \(1\)/)).toBeInTheDocument();
+    rerender(<GitSwimlanes commits={commits} status="" />);
+    expect(container.querySelector(".wt-band")).toBeNull();
+  });
+
+  it("calls onPull / onFetch from the toolbar buttons", () => {
+    const onPull = vi.fn();
+    const onFetch = vi.fn();
+    render(<GitSwimlanes commits={commits} onPull={onPull} onFetch={onFetch} />);
+    fireEvent.click(screen.getByRole("button", { name: /^pull$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^fetch$/i }));
+    expect(onPull).toHaveBeenCalledTimes(1);
+    expect(onFetch).toHaveBeenCalledTimes(1);
+  });
 });

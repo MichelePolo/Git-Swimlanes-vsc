@@ -14,10 +14,12 @@ import { parseLog } from "../model/parseLog.js";
 import { assignLanes } from "../model/assignLanes.js";
 import { detectPR } from "../model/detectPR.js";
 import { laneColorer } from "../model/color.js";
-import { computeOffsets, visibleRange } from "../layout.js";
+import { parseStatus } from "../model/parseStatus.js";
+import { computeOffsets, visibleRange, laneX } from "../layout.js";
 import { Graph } from "./Graph.js";
 import { LaneHeader } from "./LaneHeader.js";
 import { Row } from "./Row.js";
+import { WorkingTreeRow } from "./WorkingTreeRow.js";
 import { DiffModal, type DiffState } from "./DiffModal.js";
 import { BranchPanel } from "./BranchPanel.js";
 
@@ -45,6 +47,10 @@ export interface GitSwimlanesProps {
   /** Pin/hide view config; drives lane ordering and the Branches panel. */
   viewConfig?: ViewConfig;
   onViewConfigChange?(config: ViewConfig): void;
+  /** Raw `git status --porcelain` text; a working-tree row shows when non-empty. */
+  status?: string;
+  onPull?(): void;
+  onFetch?(): void;
 }
 
 const EMPTY_VIEW_CONFIG: ViewConfig = { pinned: [], hidden: [] };
@@ -82,6 +88,9 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     onFetchPullRefs,
     viewConfig,
     onViewConfigChange,
+    status,
+    onPull,
+    onFetch,
   } = props;
   const opts = { ...DEFAULTS, ...options };
 
@@ -94,6 +103,10 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
       : parseLog(log ?? "");
     return assignLanes(parsed.commits, parsed.byHash, cfg);
   }, [log, commitsProp, cfg]);
+
+  const statusFiles = useMemo(() => (status ? parseStatus(status) : []), [status]);
+  const headLane = model.laneOf[model.commits.find((c) => c.head)?.hash ?? ""] ?? 0;
+  const [wtExpanded, setWtExpanded] = useState(false);
 
   const prByHash = useMemo(() => {
     const map: Record<string, PullRequestRef | null> = {};
@@ -178,7 +191,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   return (
     <div className="git-swimlanes">
-      {(onFetchPullRefs || onViewConfigChange || (repos && repos.length > 1)) && (
+      {(onFetchPullRefs || onViewConfigChange || onPull || onFetch || (repos && repos.length > 1)) && (
         <div className="sw-toolbar">
           {repos && repos.length > 1 && (
             <select
@@ -205,6 +218,16 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
               ⤓ Pull request
             </button>
           )}
+          {onPull && (
+            <button type="button" className="sw-btn" aria-label="Pull" title="git pull" onClick={onPull}>
+              ⟳ Pull
+            </button>
+          )}
+          {onFetch && (
+            <button type="button" className="sw-btn" aria-label="Fetch" title="git fetch --all --prune" onClick={onFetch}>
+              ⤓ Fetch
+            </button>
+          )}
           {onViewConfigChange && (
             <button
               type="button"
@@ -225,6 +248,15 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
         <LaneHeader model={model} color={color} />
         <div className="sw-rows-head" />
       </div>
+      {statusFiles.length > 0 && (
+        <WorkingTreeRow
+          files={statusFiles}
+          expanded={wtExpanded}
+          onToggle={() => setWtExpanded((v) => !v)}
+          graphW={model.graphW}
+          nodeX={laneX(headLane)}
+        />
+      )}
       <div className="sw-scroll" ref={scrollRef} onScroll={onScroll}>
         <div className="sw-body">
           <Graph
