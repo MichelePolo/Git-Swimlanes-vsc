@@ -172,3 +172,12 @@
   padding: 0 5px; cursor: pointer; opacity: .55; line-height: 1.6;
 }
 .btoggle.on { opacity: 1; border-color: #7b93ff; background: #7b93ff22; }
+
+/* ── Working-tree pseudo-row (uncommitted changes) ──────────────────── */
+.wt-band { display: flex; align-items: stretch; border-bottom: 1px dashed var(--line); }
+.wt-graph { flex: none; display: block; }
+.wt-rows { flex: 1; min-width: 440px; }
+.wt-row { background: rgba(232, 176, 75, .05); }
+/* The staged/unstaged/untracked label is meaningful here — keep it visible (not hover-only). */
+.wt-band .frow .fopen { opacity: .8; }
+.wt-band .frow:hover .fopen { opacity: 1; }
