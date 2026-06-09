@@ -20,3 +20,6 @@ intellij/.intellijPlatform/
 
 # os
 .DS_Store
+
+# superpowers brainstorming companion (local mockups)
+.superpowers/
