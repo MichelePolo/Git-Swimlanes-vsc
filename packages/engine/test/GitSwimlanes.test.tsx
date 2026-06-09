@@ -139,4 +139,20 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     const off = render(<GitSwimlanes commits={commits} options={{ detectPullRequests: false }} />);
     expect(off.container.querySelectorAll(".pill.pr")).toHaveLength(0);
   });
+
+  it("applies viewConfig: hiding a branch removes its lane label", () => {
+    const { container } = render(
+      <GitSwimlanes commits={commits} viewConfig={{ pinned: [], hidden: ["feature/login"] }} />,
+    );
+    expect(container.querySelector('.lane-label[data-lane-label="feature/login"]')).toBeNull();
+    expect(container.querySelector('.lane-label[data-lane-label="hidden"]')).not.toBeNull();
+  });
+
+  it("toggles the Branches panel from the toolbar and reports config changes", () => {
+    const onViewConfigChange = vi.fn();
+    render(<GitSwimlanes commits={commits} onViewConfigChange={onViewConfigChange} />);
+    fireEvent.click(screen.getByRole("button", { name: /branches/i })); // open panel
+    fireEvent.click(screen.getByRole("button", { name: "nascondi feature/login" }));
+    expect(onViewConfigChange).toHaveBeenCalledWith({ pinned: [], hidden: ["feature/login"] });
+  });
 });
