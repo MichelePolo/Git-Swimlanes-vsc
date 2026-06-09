@@ -19,6 +19,12 @@ describe("colorFor", () => {
     expect(colorFor("(no branch ref)", 50, 45)).toBe("hsl(215 10% 50%)");
   });
 
+  it("maps the 'hidden' lane to a fixed gray, distinct from the no-branch gray", () => {
+    expect(colorFor("hidden")).toBe("hsl(215 8% 42%)");
+    expect(colorFor("hidden", 50, 45)).toBe("hsl(215 8% 42%)"); // fixed regardless of theme
+    expect(colorFor("hidden")).not.toBe(colorFor("(no branch ref)"));
+  });
+
   it("keeps hue within [0, 360)", () => {
     const h = hueFromName("main");
     expect(h).toBeGreaterThanOrEqual(0);
