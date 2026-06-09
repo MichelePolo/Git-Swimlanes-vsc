@@ -89,4 +89,17 @@ describe("webview controller (host↔engine routing)", () => {
     ctrl.receive({ type: "setLog", log: "LOG" });
     expect(states.at(-1)).toMatchObject({ log: "LOG", viewConfig: { pinned: ["main"], hidden: [] } });
   });
+
+  it("stores status from a status message", () => {
+    const { ctrl, states } = setup();
+    ctrl.receive({ type: "status", porcelain: "M  a.ts" });
+    expect(states.at(-1)).toMatchObject({ status: "M  a.ts" });
+  });
+
+  it("preserves status across a setLog", () => {
+    const { ctrl, states } = setup();
+    ctrl.receive({ type: "status", porcelain: "M  a.ts" });
+    ctrl.receive({ type: "setLog", log: "LOG" });
+    expect(states.at(-1)).toMatchObject({ log: "LOG", status: "M  a.ts" });
+  });
 });
