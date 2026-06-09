@@ -104,6 +104,10 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
             ),
           )
         }
+        val (pinned, hidden) = ViewConfigStore.of(project).load(git.currentRootPath())
+        postToWebview(
+          mapOf("type" to "viewConfig", "config" to mapOf("pinned" to pinned, "hidden" to hidden)),
+        )
       }
     } catch (e: Exception) {
       onEdt { notifyWarn("Aggiornamento fallito: ${e.message}") }
@@ -135,6 +139,15 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
           onEdt { notify("Ref delle pull request scaricati.", NotificationType.INFORMATION) }
         } catch (e: Exception) {
           onEdt { notify("Fetch PR fallito: ${e.message}", NotificationType.WARNING) }
+        }
+      }
+      "setViewConfig" -> {
+        val cfg = msg.config ?: ViewConfigDto()
+        ViewConfigStore.of(project).save(git.currentRootPath(), cfg.pinned, cfg.hidden)
+        onEdt {
+          postToWebview(
+            mapOf("type" to "viewConfig", "config" to mapOf("pinned" to cfg.pinned, "hidden" to cfg.hidden)),
+          )
         }
       }
     }
