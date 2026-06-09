@@ -72,6 +72,14 @@ export interface ViewConfig {
   hidden: string[]; // branch names to collapse into the "hidden" lane
 }
 
+/** A changed file in the working tree (`git status --porcelain`). */
+export interface WorkingTreeFile {
+  path: string;
+  index: string;    // staged code (X): ' ' M A D R C U ?
+  worktree: string; // unstaged code (Y): ' ' M A D R C U ?
+  old?: string;     // previous path, for rename/copy
+}
+
 // ─── Host ↔ webview message protocol (vscode §2 / intellij §2) ────────────────
 
 /** Webview → Host. */
@@ -82,7 +90,9 @@ export type Wv2Host =
   | { type: "openFile"; path: string; hash: string }
   | { type: "selectRepo"; id: string }
   | { type: "fetchPullRefs" }
-  | { type: "setViewConfig"; config: ViewConfig };
+  | { type: "setViewConfig"; config: ViewConfig }
+  | { type: "pull" }
+  | { type: "fetch" };
 
 /** Host → Webview. */
 export type Host2Wv =
@@ -92,4 +102,5 @@ export type Host2Wv =
   | { type: "diffError"; reqId: string; message: string }
   | { type: "theme"; theme: Theme }
   | { type: "repos"; repos: RepoRef[]; current: string }
-  | { type: "viewConfig"; config: ViewConfig };
+  | { type: "viewConfig"; config: ViewConfig }
+  | { type: "status"; porcelain: string };
