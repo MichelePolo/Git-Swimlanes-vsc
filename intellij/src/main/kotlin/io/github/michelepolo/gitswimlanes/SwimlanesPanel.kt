@@ -71,7 +71,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     browser.loadHTML(buildEngineHtml(css, js))
   }
 
-  fun refresh() = runOnPooled {
+  fun refresh(onDone: (() -> Unit)? = null) = runOnPooled {
     try {
       val log = git.log()
       val dark = !JBColor.isBright()
@@ -110,6 +110,7 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
           mapOf("type" to "viewConfig", "config" to mapOf("pinned" to pinned, "hidden" to hidden)),
         )
         if (status != null) postToWebview(mapOf("type" to "status", "porcelain" to status))
+        onDone?.invoke()
       }
     } catch (e: Exception) {
       onEdt { notifyWarn("Aggiornamento fallito: ${e.message}") }
@@ -160,8 +161,9 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
   private fun runGitAction(label: String, block: () -> Unit) = runOnPooled {
     try {
       block()
-      refresh()
-      onEdt { notify("$label completato.", NotificationType.INFORMATION) }
+      // Notify only after refresh() has pushed the updated graph/status to the webview,
+      // so the success balloon never precedes the visible update (parity with the VS Code host).
+      refresh { notify("$label completato.", NotificationType.INFORMATION) }
     } catch (e: Exception) {
       onEdt { notify("$label fallito: ${e.message}", NotificationType.WARNING) }
     }
