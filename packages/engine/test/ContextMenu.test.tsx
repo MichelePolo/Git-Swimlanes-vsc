@@ -44,4 +44,19 @@ describe("ContextMenu", () => {
     fireEvent.click(document.body);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders a divider above a separator item", () => {
+    const { container } = render(
+      <ContextMenu
+        x={0}
+        y={0}
+        items={[
+          { label: "A", onSelect: () => {} },
+          { label: "B", onSelect: () => {}, separator: true },
+        ]}
+        onClose={() => {}}
+      />,
+    );
+    expect(container.querySelector(".ctx-sep")).not.toBeNull();
+  });
 });

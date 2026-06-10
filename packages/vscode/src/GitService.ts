@@ -133,4 +133,47 @@ export class GitService {
     else await run("git", ["push"], { cwd: this.cwd });
     if (opts.tags) await run("git", ["push", opts.remote, "--tags"], { cwd: this.cwd });
   }
+
+  private static assertHash(h: string): void {
+    if (!/^[0-9a-f]{4,40}$/.test(h)) throw new Error(`hash non valido: ${h}`);
+  }
+
+  async revert(hash: string): Promise<void> {
+    GitService.assertHash(hash);
+    await run("git", ["revert", "--no-edit", hash], { cwd: this.cwd });
+  }
+
+  async cherryPick(hash: string): Promise<void> {
+    GitService.assertHash(hash);
+    await run("git", ["cherry-pick", hash], { cwd: this.cwd });
+  }
+
+  async resetTo(hash: string, mode: "soft" | "mixed"): Promise<void> {
+    GitService.assertHash(hash);
+    await run("git", ["reset", `--${mode}`, hash], { cwd: this.cwd });
+  }
+
+  async revertAbort(): Promise<void> {
+    await run("git", ["revert", "--abort"], { cwd: this.cwd });
+  }
+
+  async cherryPickAbort(): Promise<void> {
+    await run("git", ["cherry-pick", "--abort"], { cwd: this.cwd });
+  }
+
+  /** Which sequencer (if any) is mid-operation, so the host can offer Abort. */
+  async sequencerState(): Promise<"revert" | "cherryPick" | null> {
+    if (await this.refExists("REVERT_HEAD")) return "revert";
+    if (await this.refExists("CHERRY_PICK_HEAD")) return "cherryPick";
+    return null;
+  }
+
+  private async refExists(name: string): Promise<boolean> {
+    try {
+      await run("git", ["rev-parse", "--verify", "--quiet", name], { cwd: this.cwd });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

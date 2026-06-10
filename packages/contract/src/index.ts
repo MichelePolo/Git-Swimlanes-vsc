@@ -98,7 +98,10 @@ export type Wv2Host =
   | { type: "deleteBranch"; name: string }
   | { type: "deleteTag"; name: string }
   | { type: "checkout"; target: string; detach: boolean }
-  | { type: "push" };
+  | { type: "push" }
+  | { type: "revert"; hash: string }
+  | { type: "cherryPick"; hash: string }
+  | { type: "resetTo"; hash: string };
 
 /** Host → Webview. */
 export type Host2Wv =

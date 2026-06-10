@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, Fragment } from "react";
 
 export interface MenuItem {
   label: string;
   onSelect: () => void;
   danger?: boolean;
+  /** Render a divider above this item (groups menu sections). */
+  separator?: boolean;
 }
 
 export interface ContextMenuProps {
@@ -35,18 +37,20 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): JSX.Ele
   return (
     <div className="ctx-menu" style={{ left: x, top: y }} role="menu" onClick={(e) => e.stopPropagation()}>
       {items.map((it, i) => (
-        <button
-          key={i}
-          type="button"
-          role="menuitem"
-          className={`ctx-item${it.danger ? " danger" : ""}`}
-          onClick={() => {
-            it.onSelect();
-            onClose();
-          }}
-        >
-          {it.label}
-        </button>
+        <Fragment key={i}>
+          {it.separator && <div className="ctx-sep" role="separator" />}
+          <button
+            type="button"
+            role="menuitem"
+            className={`ctx-item${it.danger ? " danger" : ""}`}
+            onClick={() => {
+              it.onSelect();
+              onClose();
+            }}
+          >
+            {it.label}
+          </button>
+        </Fragment>
       ))}
     </div>
   );

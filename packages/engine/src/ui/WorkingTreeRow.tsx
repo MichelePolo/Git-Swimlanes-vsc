@@ -18,6 +18,7 @@ function fileStatus(code: string): { label: string; color: string } {
     case "R": return { label: "rinominato", color: "#b48ead" };
     case "C": return { label: "copiato", color: "#56b6c2" };
     case "?": return { label: "non tracciato", color: "#8a96a8" };
+    case "U": return { label: "conflitto", color: "#e06c75" };
     default: return { label: "modifica", color: "#8a96a8" };
   }
 }
@@ -52,7 +53,7 @@ export function WorkingTreeRow({ files, expanded, onToggle, graphW, nodeX }: Wor
               const staged = f.index !== " " && f.index !== "?";
               const code = f.index === "?" ? "?" : staged ? f.index : f.worktree;
               const st = fileStatus(code);
-              const where = f.index === "?" ? "untracked" : staged ? "staged" : "unstaged";
+              const where = code === "U" ? "conflitto" : f.index === "?" ? "untracked" : staged ? "staged" : "unstaged";
               return (
                 <div key={f.path} className="frow" data-path={f.path}>
                   <span className="fbadge" style={{ color: st.color, borderColor: st.color }} title={st.label}>

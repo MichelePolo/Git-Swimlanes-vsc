@@ -187,6 +187,7 @@
 .ctx-item:hover { background: rgba(120, 150, 255, .14); }
 .ctx-item.danger { color: #f0a8ad; }
 .ctx-item.danger:hover { background: rgba(224, 108, 117, .16); }
+.ctx-sep { height: 1px; background: var(--line); margin: 4px 2px; }
 
 /* ── Working-tree pseudo-row (uncommitted changes) ──────────────────── */
 .wt-band { display: flex; align-items: stretch; border-bottom: 1px dashed var(--line); }

@@ -130,6 +130,9 @@ function boot(): void {
         onDeleteTag: (name) => host.post({ type: "deleteTag", name }),
         onCheckout: (target, detach) => host.post({ type: "checkout", target, detach }),
         onPush: () => host.post({ type: "push" }),
+        onRevert: (hash) => host.post({ type: "revert", hash }),
+        onCherryPick: (hash) => host.post({ type: "cherryPick", hash }),
+        onResetTo: (hash) => host.post({ type: "resetTo", hash }),
       }),
     );
   }
