@@ -167,6 +167,35 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
       case "push":
         await this.handlePush();
         break;
+      case "revert": {
+        const ok = await vscode.window.showWarningMessage(
+          `Revert del commit ${msg.hash.slice(0, 8)}? Creerà un commit che annulla le sue modifiche.`,
+          { modal: true },
+          "Revert",
+        );
+        if (ok === "Revert") await this.runMutation("Revert", () => this.git.revert(msg.hash));
+        break;
+      }
+      case "cherryPick": {
+        const ok = await vscode.window.showWarningMessage(
+          `Cherry-pick del commit ${msg.hash.slice(0, 8)} sul branch corrente?`,
+          { modal: true },
+          "Cherry-pick",
+        );
+        if (ok === "Cherry-pick") await this.runMutation("Cherry-pick", () => this.git.cherryPick(msg.hash));
+        break;
+      }
+      case "resetTo": {
+        const mode = await vscode.window.showWarningMessage(
+          `Reset del branch corrente al commit ${msg.hash.slice(0, 8)}:`,
+          { modal: true },
+          "Soft (mantieni staged)",
+          "Mixed (mantieni unstaged)",
+        );
+        if (mode === "Soft (mantieni staged)") await this.runMutation("Reset", () => this.git.resetTo(msg.hash, "soft"));
+        else if (mode === "Mixed (mantieni unstaged)") await this.runMutation("Reset", () => this.git.resetTo(msg.hash, "mixed"));
+        break;
+      }
     }
   }
 
@@ -200,6 +229,39 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
       void vscode.window.showInformationMessage(`Git Swimlanes: ${label} completato.`);
     } catch (e) {
       void vscode.window.showWarningMessage(`Git Swimlanes: ${label} fallito — ${String(e)}`);
+    }
+  }
+
+  /**
+   * Run a guarded history mutation. On success: refresh + a reflog undo hint. On failure: if a
+   * sequencer is mid-operation (conflict), refresh to show it and offer Abort; otherwise warn.
+   */
+  private async runMutation(label: string, fn: () => Promise<void>): Promise<void> {
+    try {
+      await fn();
+      await this.refresh();
+      void vscode.window.showInformationMessage(
+        `Git Swimlanes: ${label} completato. Stato precedente in git reflog (HEAD@{1}).`,
+      );
+    } catch (e) {
+      const seq = await this.git.sequencerState();
+      if (!seq) {
+        void vscode.window.showWarningMessage(`Git Swimlanes: ${label} fallito — ${String(e)}`);
+        return;
+      }
+      await this.refresh();
+      const choice = await vscode.window.showWarningMessage(
+        `Git Swimlanes: ${label} — conflitto. Risolvi nell'IDE e completa, oppure annulla.`,
+        "Annulla operazione",
+      );
+      if (choice !== "Annulla operazione") return;
+      try {
+        await (seq === "revert" ? this.git.revertAbort() : this.git.cherryPickAbort());
+        await this.refresh();
+        void vscode.window.showInformationMessage("Git Swimlanes: operazione annullata.");
+      } catch (e2) {
+        void vscode.window.showWarningMessage(`Git Swimlanes: annullamento fallito — ${String(e2)}`);
+      }
     }
   }
 
