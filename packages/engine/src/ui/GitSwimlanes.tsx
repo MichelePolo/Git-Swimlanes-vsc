@@ -22,6 +22,7 @@ import { Row } from "./Row.js";
 import { WorkingTreeRow } from "./WorkingTreeRow.js";
 import { DiffModal, type DiffState } from "./DiffModal.js";
 import { BranchPanel } from "./BranchPanel.js";
+import { ContextMenu, type MenuItem } from "./ContextMenu.js";
 
 export interface GitSwimlanesProps {
   log?: string;
@@ -51,6 +52,12 @@ export interface GitSwimlanesProps {
   status?: string;
   onPull?(): void;
   onFetch?(): void;
+  onCreateBranch?(hash: string): void;
+  onCreateTag?(hash: string): void;
+  onDeleteBranch?(name: string): void;
+  onDeleteTag?(name: string): void;
+  onCheckout?(target: string, detach: boolean): void;
+  onPush?(): void;
 }
 
 const EMPTY_VIEW_CONFIG: ViewConfig = { pinned: [], hidden: [] };
@@ -91,6 +98,12 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     status,
     onPull,
     onFetch,
+    onCreateBranch,
+    onCreateTag,
+    onDeleteBranch,
+    onDeleteTag,
+    onCheckout,
+    onPush,
   } = props;
   const opts = { ...DEFAULTS, ...options };
 
@@ -106,6 +119,30 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   const statusFiles = useMemo(() => (status ? parseStatus(status) : []), [status]);
   const headLane = model.laneOf[model.commits.find((c) => c.head)?.hash ?? ""] ?? 0;
+  const headHash = model.commits.find((c) => c.head)?.hash;
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const PSEUDO_LANES = new Set(["hidden", "(no branch ref)"]);
+
+  function openCommitMenu(e: { preventDefault(): void; clientX: number; clientY: number }, c: CommitNode): void {
+    const items: MenuItem[] = [];
+    if (onCreateBranch) items.push({ label: "Crea branch qui", onSelect: () => onCreateBranch(c.hash) });
+    if (onCreateTag) items.push({ label: "Crea tag qui", onSelect: () => onCreateTag(c.hash) });
+    if (onCheckout) items.push({ label: "Checkout questo commit", onSelect: () => onCheckout(c.hash, true) });
+    if (onDeleteTag) for (const t of c.tags) items.push({ label: `Elimina tag "${t}"`, onSelect: () => onDeleteTag(t), danger: true });
+    if (!items.length) return;
+    e.preventDefault();
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  }
+
+  function openLaneMenu(e: { preventDefault(): void; clientX?: number; clientY?: number }, name: string): void {
+    if (PSEUDO_LANES.has(name)) return;
+    const items: MenuItem[] = [];
+    if (onCheckout) items.push({ label: `Switch a "${name}"`, onSelect: () => onCheckout(name, false) });
+    if (onDeleteBranch) items.push({ label: `Elimina branch "${name}"`, onSelect: () => onDeleteBranch(name), danger: true });
+    if (!items.length) return;
+    e.preventDefault();
+    setMenu({ x: e.clientX ?? 0, y: e.clientY ?? 0, items });
+  }
   const [wtExpanded, setWtExpanded] = useState(false);
 
   const prByHash = useMemo(() => {
@@ -191,7 +228,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
 
   return (
     <div className="git-swimlanes">
-      {(onFetchPullRefs || onViewConfigChange || onPull || onFetch || (repos && repos.length > 1)) && (
+      {(onFetchPullRefs || onViewConfigChange || onPull || onFetch || onCreateBranch || onPush || (repos && repos.length > 1)) && (
         <div className="sw-toolbar">
           {repos && repos.length > 1 && (
             <select
@@ -228,6 +265,22 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
               ⤓ Fetch
             </button>
           )}
+          {onCreateBranch && headHash && (
+            <button
+              type="button"
+              className="sw-btn"
+              aria-label="Nuovo branch"
+              title="Crea un branch da HEAD"
+              onClick={() => onCreateBranch(headHash)}
+            >
+              ⎇ Nuovo branch
+            </button>
+          )}
+          {onPush && (
+            <button type="button" className="sw-btn" aria-label="Push" title="git push" onClick={onPush}>
+              ⇡ Push
+            </button>
+          )}
           {onViewConfigChange && (
             <button
               type="button"
@@ -245,7 +298,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
         <BranchPanel allBranches={model.allBranches} config={cfg} onChange={onViewConfigChange} />
       )}
       <div className="sw-head">
-        <LaneHeader model={model} color={color} />
+        <LaneHeader model={model} color={color} onLaneContextMenu={(name, e) => openLaneMenu(e, name)} />
         <div className="sw-rows-head" />
       </div>
       {statusFiles.length > 0 && (
@@ -275,6 +328,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
                   key={c.hash}
                   className="sw-rowpos"
                   style={{ position: "absolute", top: offsets.top[i], left: 0, right: 0 }}
+                  onContextMenu={(e) => openCommitMenu(e, c)}
                 >
                   <Row
                     commit={c}
@@ -298,6 +352,7 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
           onOpenFile={onOpenFile ? () => onOpenFile(diff.req) : undefined}
         />
       )}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
     </div>
   );
 }

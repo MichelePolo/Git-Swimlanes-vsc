@@ -172,4 +172,67 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     expect(onPull).toHaveBeenCalledTimes(1);
     expect(onFetch).toHaveBeenCalledTimes(1);
   });
+
+  const LOG_T = [
+    "m1|m0|HEAD -> main, tag: v1.0|Ann|2024-01-03|main tip",
+    "f1|m0|feature|Ann|2024-01-02|feature tip",
+    "m0|||Ann|2024-01-01|base",
+  ].join("\n");
+  const commitsT = parseLog(LOG_T).commits;
+
+  it("opens a commit context menu (create/checkout + delete-tag) on right-click", () => {
+    const onCreateBranch = vi.fn();
+    const { container } = render(
+      <GitSwimlanes
+        commits={commitsT}
+        onCreateBranch={onCreateBranch}
+        onCreateTag={vi.fn()}
+        onCheckout={vi.fn()}
+        onDeleteTag={vi.fn()}
+      />,
+    );
+    fireEvent.contextMenu(container.querySelector(".sw-rowpos")!); // first row = m1 (tagged HEAD)
+    expect(screen.getByText("Crea branch qui")).toBeInTheDocument();
+    expect(screen.getByText("Crea tag qui")).toBeInTheDocument();
+    expect(screen.getByText("Checkout questo commit")).toBeInTheDocument();
+    expect(screen.getByText('Elimina tag "v1.0"')).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Crea branch qui"));
+    expect(onCreateBranch).toHaveBeenCalledWith("m1");
+  });
+
+  it("opens a lane-label menu (switch + delete) for a real branch", () => {
+    const onDeleteBranch = vi.fn();
+    const { container } = render(
+      <GitSwimlanes commits={commitsT} onCheckout={vi.fn()} onDeleteBranch={onDeleteBranch} />,
+    );
+    fireEvent.contextMenu(container.querySelector('.lane-label[data-lane-label="main"]')!);
+    expect(screen.getByText('Switch a "main"')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Elimina branch "main"'));
+    expect(onDeleteBranch).toHaveBeenCalledWith("main");
+  });
+
+  it("does not open a menu on the hidden pseudo-lane", () => {
+    const { container } = render(
+      <GitSwimlanes
+        commits={parseLog(LOG_T).commits}
+        viewConfig={{ pinned: [], hidden: ["feature"] }}
+        onCheckout={vi.fn()}
+        onDeleteBranch={vi.fn()}
+      />,
+    );
+    const hidden = container.querySelector('.lane-label[data-lane-label="hidden"]');
+    expect(hidden).not.toBeNull(); // feature's commit falls into the grey 'hidden' lane (Phase 1)
+    fireEvent.contextMenu(hidden!);
+    expect(screen.queryByText(/^Switch a/)).toBeNull();
+  });
+
+  it("fires onCreateBranch(headHash) and onPush from the toolbar", () => {
+    const onCreateBranch = vi.fn();
+    const onPush = vi.fn();
+    render(<GitSwimlanes commits={commitsT} onCreateBranch={onCreateBranch} onPush={onPush} />);
+    fireEvent.click(screen.getByRole("button", { name: /nuovo branch/i }));
+    expect(onCreateBranch).toHaveBeenCalledWith("m1"); // m1 is HEAD
+    fireEvent.click(screen.getByRole("button", { name: /^push$/i }));
+    expect(onPush).toHaveBeenCalledTimes(1);
+  });
 });
