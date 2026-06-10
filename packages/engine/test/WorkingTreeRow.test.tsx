@@ -49,4 +49,18 @@ describe("WorkingTreeRow", () => {
     expect(node).not.toBeNull();
     expect(node!.getAttribute("stroke-dasharray")).not.toBeNull();
   });
+
+  it("labels an unmerged (U) file as a conflict", () => {
+    render(
+      <WorkingTreeRow
+        files={[{ index: "U", worktree: "U", path: "src/c.ts" }]}
+        expanded
+        onToggle={() => {}}
+        graphW={100}
+        nodeX={30}
+      />,
+    );
+    expect(screen.getByText("conflitto")).toBeInTheDocument(); // the staged/unstaged-style label
+    expect(screen.getByText("U")).toBeInTheDocument(); // the badge
+  });
 });
