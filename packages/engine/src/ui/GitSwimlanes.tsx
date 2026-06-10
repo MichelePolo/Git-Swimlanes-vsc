@@ -134,14 +134,14 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     setMenu({ x: e.clientX, y: e.clientY, items });
   }
 
-  function openLaneMenu(e: { preventDefault(): void; clientX?: number; clientY?: number }, name: string): void {
+  function openLaneMenu(e: { preventDefault(): void; clientX: number; clientY: number }, name: string): void {
     if (PSEUDO_LANES.has(name)) return;
     const items: MenuItem[] = [];
     if (onCheckout) items.push({ label: `Switch a "${name}"`, onSelect: () => onCheckout(name, false) });
     if (onDeleteBranch) items.push({ label: `Elimina branch "${name}"`, onSelect: () => onDeleteBranch(name), danger: true });
     if (!items.length) return;
     e.preventDefault();
-    setMenu({ x: e.clientX ?? 0, y: e.clientY ?? 0, items });
+    setMenu({ x: e.clientX, y: e.clientY, items });
   }
   const [wtExpanded, setWtExpanded] = useState(false);
 

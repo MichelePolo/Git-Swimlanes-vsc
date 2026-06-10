@@ -8,7 +8,7 @@ export interface LaneHeaderProps {
   /** Branch → color (theme-aware); defaults to the dark-tuned colorFor. */
   color?: (name: string) => string;
   /** Right-click on a lane label (the branch name). */
-  onLaneContextMenu?(name: string, e: { preventDefault(): void }): void;
+  onLaneContextMenu?(name: string, e: { preventDefault(): void; clientX: number; clientY: number }): void;
 }
 
 /** Header height; tall enough for the rotated labels (engine spec §5.1). */
