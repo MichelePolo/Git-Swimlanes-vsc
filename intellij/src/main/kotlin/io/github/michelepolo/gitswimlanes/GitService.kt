@@ -53,6 +53,16 @@ class GitService(private val project: Project) {
     return rawGit(listOf("show", "-M", hash, "--") + paths)
   }
 
+  fun fetch() {
+    rawGit(listOf("fetch", "--all", "--prune"))
+  }
+
+  fun pull() {
+    rawGit(listOf("pull", "--ff"))
+  }
+
+  fun status(): String = rawGit(listOf("-c", "core.quotepath=false", "status", "--porcelain"))
+
   /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). Uses git's creds. */
   fun fetchPullRefs() {
     val remote = remoteName()

@@ -71,11 +71,12 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
     browser.loadHTML(buildEngineHtml(css, js))
   }
 
-  fun refresh() = runOnPooled {
+  fun refresh(onDone: (() -> Unit)? = null) = runOnPooled {
     try {
       val log = git.log()
       val dark = !JBColor.isBright()
       val repos = git.repos()
+      val status = try { git.status() } catch (e: Exception) { null }
       onEdt {
         postToWebview(mapOf("type" to "setLog", "log" to log))
         // Lane lightness + base colors follow the IDE theme (JCEF inherits nothing).
@@ -108,6 +109,8 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
         postToWebview(
           mapOf("type" to "viewConfig", "config" to mapOf("pinned" to pinned, "hidden" to hidden)),
         )
+        if (status != null) postToWebview(mapOf("type" to "status", "porcelain" to status))
+        onDone?.invoke()
       }
     } catch (e: Exception) {
       onEdt { notifyWarn("Aggiornamento fallito: ${e.message}") }
@@ -141,6 +144,8 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
           onEdt { notify("Fetch PR fallito: ${e.message}", NotificationType.WARNING) }
         }
       }
+      "pull" -> runGitAction("Pull") { git.pull() }
+      "fetch" -> runGitAction("Fetch") { git.fetch() }
       "setViewConfig" -> {
         val cfg = msg.config ?: ViewConfigDto()
         ViewConfigStore.of(project).save(git.currentRootPath(), cfg.pinned, cfg.hidden)
@@ -150,6 +155,17 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
           )
         }
       }
+    }
+  }
+
+  private fun runGitAction(label: String, block: () -> Unit) = runOnPooled {
+    try {
+      block()
+      // Notify only after refresh() has pushed the updated graph/status to the webview,
+      // so the success balloon never precedes the visible update (parity with the VS Code host).
+      refresh { notify("$label completato.", NotificationType.INFORMATION) }
+    } catch (e: Exception) {
+      onEdt { notify("$label fallito: ${e.message}", NotificationType.WARNING) }
     }
   }
 

@@ -43,6 +43,11 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
       const repos = await this.listRepos();
       if (repos.length > 1) this.post({ type: "repos", repos, current: this.currentRoot });
       this.post({ type: "viewConfig", config: this.loadViewConfig() });
+      try {
+        this.post({ type: "status", porcelain: await this.git.status() });
+      } catch {
+        /* status is optional; a failure must not blank the log */
+      }
     } catch (e) {
       void vscode.window.showErrorMessage(`Git Swimlanes: ${String(e)}`);
     }
@@ -107,6 +112,22 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
           void vscode.window.showWarningMessage(`Git Swimlanes: fetch PR fallito — ${String(e)}`);
         }
         break;
+      case "pull":
+        await this.runGitAction("Pull", () => this.git.pull());
+        break;
+      case "fetch":
+        await this.runGitAction("Fetch", () => this.git.fetch());
+        break;
+    }
+  }
+
+  private async runGitAction(label: string, fn: () => Promise<void>): Promise<void> {
+    try {
+      await fn();
+      await this.refresh();
+      void vscode.window.showInformationMessage(`Git Swimlanes: ${label} completato.`);
+    } catch (e) {
+      void vscode.window.showWarningMessage(`Git Swimlanes: ${label} fallito — ${String(e)}`);
     }
   }
 

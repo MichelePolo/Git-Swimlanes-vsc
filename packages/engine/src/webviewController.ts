@@ -22,6 +22,7 @@ export interface ViewState {
   repos?: RepoRef[];
   currentRepo?: string;
   viewConfig?: ViewConfig;
+  status?: string;
 }
 
 export interface Controller {
@@ -73,6 +74,9 @@ export function createController(host: HostBridge, onState: (s: ViewState) => vo
           break;
         case "viewConfig":
           emit({ ...state, viewConfig: msg.config });
+          break;
+        case "status":
+          emit({ ...state, status: msg.porcelain });
           break;
         case "diffResult": {
           const p = pending.get(msg.reqId);

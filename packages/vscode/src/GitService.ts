@@ -47,6 +47,21 @@ export class GitService {
     await run("git", ["fetch", remote, refspec], { cwd: this.cwd, maxBuffer: 16 * 1024 * 1024 });
   }
 
+  async fetch(): Promise<void> {
+    await run("git", ["fetch", "--all", "--prune"], { cwd: this.cwd, maxBuffer: 16 * 1024 * 1024 });
+  }
+
+  async pull(): Promise<void> {
+    await run("git", ["pull", "--ff"], { cwd: this.cwd, maxBuffer: 16 * 1024 * 1024 });
+  }
+
+  async status(): Promise<string> {
+    const { stdout } = await run("git", ["-c", "core.quotepath=false", "status", "--porcelain"], {
+      cwd: this.cwd, maxBuffer: 16 * 1024 * 1024,
+    });
+    return stdout;
+  }
+
   private async remoteName(): Promise<string> {
     const { stdout } = await run("git", ["remote"], { cwd: this.cwd });
     const remotes = stdout.split("\n").map((s) => s.trim()).filter(Boolean);

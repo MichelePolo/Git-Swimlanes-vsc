@@ -121,6 +121,9 @@ function boot(): void {
         onFetchPullRefs: () => host.post({ type: "fetchPullRefs" }),
         viewConfig: state.viewConfig,
         onViewConfigChange: (config) => host.post({ type: "setViewConfig", config }),
+        status: state.status,
+        onPull: () => host.post({ type: "pull" }),
+        onFetch: () => host.post({ type: "fetch" }),
       }),
     );
   }
