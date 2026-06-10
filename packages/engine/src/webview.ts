@@ -124,6 +124,12 @@ function boot(): void {
         status: state.status,
         onPull: () => host.post({ type: "pull" }),
         onFetch: () => host.post({ type: "fetch" }),
+        onCreateBranch: (hash) => host.post({ type: "createBranch", hash }),
+        onCreateTag: (hash) => host.post({ type: "createTag", hash }),
+        onDeleteBranch: (name) => host.post({ type: "deleteBranch", name }),
+        onDeleteTag: (name) => host.post({ type: "deleteTag", name }),
+        onCheckout: (target, detach) => host.post({ type: "checkout", target, detach }),
+        onPush: () => host.post({ type: "push" }),
       }),
     );
   }

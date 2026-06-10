@@ -78,4 +78,59 @@ export class GitService {
     });
     return stdout;
   }
+
+  /**
+   * Reject a ref/name that begins with `-` so it can never be smuggled in as a git flag
+   * (argument injection). Combined with the `--` end-of-options separator on every call,
+   * webview/user-supplied names are always treated as positional arguments.
+   */
+  private static assertSafeRef(v: string): void {
+    if (v.startsWith("-")) throw new Error(`Argomento git non valido: ${v}`);
+  }
+
+  async createBranch(name: string, hash: string): Promise<void> {
+    GitService.assertSafeRef(name);
+    GitService.assertSafeRef(hash);
+    await run("git", ["branch", "--", name, hash], { cwd: this.cwd });
+  }
+
+  async createTag(name: string, hash: string): Promise<void> {
+    GitService.assertSafeRef(name);
+    GitService.assertSafeRef(hash);
+    await run("git", ["tag", "--", name, hash], { cwd: this.cwd });
+  }
+
+  async deleteBranch(name: string): Promise<void> {
+    GitService.assertSafeRef(name);
+    await run("git", ["branch", "-d", "--", name], { cwd: this.cwd });
+  }
+
+  async deleteTag(name: string): Promise<void> {
+    GitService.assertSafeRef(name);
+    await run("git", ["tag", "-d", "--", name], { cwd: this.cwd });
+  }
+
+  async switchRef(target: string, detach: boolean): Promise<void> {
+    GitService.assertSafeRef(target);
+    const args = detach ? ["switch", "--detach", "--", target] : ["switch", "--", target];
+    await run("git", args, { cwd: this.cwd });
+  }
+
+  async currentBranchInfo(): Promise<{ branch: string; hasUpstream: boolean; remote: string }> {
+    const { stdout: branch } = await run("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: this.cwd });
+    let hasUpstream = false;
+    try {
+      await run("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], { cwd: this.cwd });
+      hasUpstream = true;
+    } catch {
+      hasUpstream = false;
+    }
+    return { branch: branch.trim(), hasUpstream, remote: await this.remoteName() };
+  }
+
+  async push(opts: { setUpstream: boolean; remote: string; branch: string; tags: boolean }): Promise<void> {
+    if (opts.setUpstream) await run("git", ["push", "-u", opts.remote, opts.branch], { cwd: this.cwd });
+    else await run("git", ["push"], { cwd: this.cwd });
+    if (opts.tags) await run("git", ["push", opts.remote, "--tags"], { cwd: this.cwd });
+  }
 }

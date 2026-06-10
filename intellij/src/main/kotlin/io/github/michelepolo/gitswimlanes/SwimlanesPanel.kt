@@ -6,6 +6,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.ui.JBColor
@@ -146,6 +147,31 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
       }
       "pull" -> runGitAction("Pull") { git.pull() }
       "fetch" -> runGitAction("Fetch") { git.fetch() }
+      "createBranch" -> onEdt {
+        val name = Messages.showInputDialog(project, "Nuovo branch dal commit ${msg.hash!!.take(8)}", "Crea branch", null)
+        if (!name.isNullOrBlank()) runGitAction("Crea branch") { git.createBranch(name.trim(), msg.hash) }
+      }
+      "createTag" -> onEdt {
+        val name = Messages.showInputDialog(project, "Nuovo tag dal commit ${msg.hash!!.take(8)}", "Crea tag", null)
+        if (!name.isNullOrBlank()) runGitAction("Crea tag") { git.createTag(name.trim(), msg.hash) }
+      }
+      "deleteBranch" -> onEdt {
+        if (Messages.showYesNoDialog(project, "Eliminare il branch \"${msg.name}\"?", "Elimina branch", null) == Messages.YES) {
+          runGitAction("Elimina branch") { git.deleteBranch(msg.name!!) }
+        }
+      }
+      "deleteTag" -> onEdt {
+        if (Messages.showYesNoDialog(project, "Eliminare il tag \"${msg.name}\"?", "Elimina tag", null) == Messages.YES) {
+          runGitAction("Elimina tag") { git.deleteTag(msg.name!!) }
+        }
+      }
+      "checkout" -> onEdt {
+        val proceed = msg.detach != true || Messages.showOkCancelDialog(
+          project, "Checkout del commit ${msg.target!!.take(8)} — passerai a HEAD detached.", "Checkout", "Continua", "Annulla", null,
+        ) == Messages.OK
+        if (proceed) runGitAction("Checkout") { git.switchRef(msg.target!!, msg.detach == true) }
+      }
+      "push" -> handlePush()
       "setViewConfig" -> {
         val cfg = msg.config ?: ViewConfigDto()
         ViewConfigStore.of(project).save(git.currentRootPath(), cfg.pinned, cfg.hidden)
@@ -166,6 +192,27 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
       refresh { notify("$label completato.", NotificationType.INFORMATION) }
     } catch (e: Exception) {
       onEdt { notify("$label fallito: ${e.message}", NotificationType.WARNING) }
+    }
+  }
+
+  private fun handlePush() = runOnPooled {
+    val info = try {
+      git.currentBranchInfo()
+    } catch (e: Exception) {
+      onEdt { notify("Push non disponibile: ${e.message}", NotificationType.WARNING) }
+      return@runOnPooled
+    }
+    onEdt {
+      if (info.branch == "HEAD") {
+        notify("HEAD detached, nessun branch da pushare.", NotificationType.WARNING)
+        return@onEdt
+      }
+      val label = if (info.hasUpstream) "Push del branch \"${info.branch}\"?"
+        else "Push di \"${info.branch}\" e imposta upstream?"
+      val choice = Messages.showDialog(project, label, "Push", arrayOf("Push", "Push + tag", "Annulla"), 0, null)
+      if (choice == 0 || choice == 1) {
+        runGitAction("Push") { git.push(!info.hasUpstream, info.remote, info.branch, choice == 1) }
+      }
     }
   }
 

@@ -92,7 +92,13 @@ export type Wv2Host =
   | { type: "fetchPullRefs" }
   | { type: "setViewConfig"; config: ViewConfig }
   | { type: "pull" }
-  | { type: "fetch" };
+  | { type: "fetch" }
+  | { type: "createBranch"; hash: string }
+  | { type: "createTag"; hash: string }
+  | { type: "deleteBranch"; name: string }
+  | { type: "deleteTag"; name: string }
+  | { type: "checkout"; target: string; detach: boolean }
+  | { type: "push" };
 
 /** Host → Webview. */
 export type Host2Wv =

@@ -18,6 +18,9 @@ data class WvMessage(
   val path: String? = null,
   val oldPath: String? = null,
   val id: String? = null,
+  val name: String? = null,
+  val target: String? = null,
+  val detach: Boolean? = null,
   val config: ViewConfigDto? = null,
 )
 

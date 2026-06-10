@@ -63,6 +63,59 @@ class GitService(private val project: Project) {
 
   fun status(): String = rawGit(listOf("-c", "core.quotepath=false", "status", "--porcelain"))
 
+  /**
+   * Reject a ref/name beginning with `-` so it can never be smuggled in as a git flag
+   * (argument injection). Combined with the `--` end-of-options separator on every call,
+   * webview/user-supplied names are always treated as positional arguments.
+   */
+  private fun assertSafeRef(v: String) {
+    require(!v.startsWith("-")) { "Argomento git non valido: $v" }
+  }
+
+  fun createBranch(name: String, hash: String) {
+    assertSafeRef(name)
+    assertSafeRef(hash)
+    rawGit(listOf("branch", "--", name, hash))
+  }
+
+  fun createTag(name: String, hash: String) {
+    assertSafeRef(name)
+    assertSafeRef(hash)
+    rawGit(listOf("tag", "--", name, hash))
+  }
+
+  fun deleteBranch(name: String) {
+    assertSafeRef(name)
+    rawGit(listOf("branch", "-d", "--", name))
+  }
+
+  fun deleteTag(name: String) {
+    assertSafeRef(name)
+    rawGit(listOf("tag", "-d", "--", name))
+  }
+
+  fun switchRef(target: String, detach: Boolean) {
+    assertSafeRef(target)
+    rawGit(if (detach) listOf("switch", "--detach", "--", target) else listOf("switch", "--", target))
+  }
+
+  data class BranchInfo(val branch: String, val hasUpstream: Boolean, val remote: String)
+
+  fun currentBranchInfo(): BranchInfo {
+    val branch = rawGit(listOf("rev-parse", "--abbrev-ref", "HEAD")).trim()
+    val hasUpstream = try {
+      rawGit(listOf("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")); true
+    } catch (e: Exception) {
+      false
+    }
+    return BranchInfo(branch, hasUpstream, remoteName())
+  }
+
+  fun push(setUpstream: Boolean, remote: String, branch: String, tags: Boolean) {
+    if (setUpstream) rawGit(listOf("push", "-u", remote, branch)) else rawGit(listOf("push"))
+    if (tags) rawGit(listOf("push", remote, "--tags"))
+  }
+
   /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). Uses git's creds. */
   fun fetchPullRefs() {
     val remote = remoteName()
