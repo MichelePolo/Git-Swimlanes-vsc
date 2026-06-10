@@ -3,6 +3,22 @@
 Artefatti pronti da installare **senza ricompilare** (utile sulle IDE del lavoro).
 Scarica il file che ti serve da questa cartella e segui i passi.
 
+## Cosa fa
+
+Visualizzatore di cronologia Git deterministico a **corsie**, con gestione GIT integrata.
+Stesso motore in VS Code e IntelliJ.
+
+- **Vista:** grafo a corsie con etichette persistenti, diff dei commit, rilevamento PR/MR,
+  multi-repo, tema chiaro/scuro. **Pin** e **hide** dei branch (corsia "hidden").
+- **Lettura/sync:** Pull · Fetch · fetch dei ref PR; **stato del working tree** (file non
+  committati, read-only) come riga in cima al grafo.
+- **Azioni sui ref** (menu contestuale su commit/corsia + toolbar): crea/elimina branch e tag,
+  checkout/switch, push (con `-u` / `--tags`).
+- **Mutazioni guardate** (con conferma esplicita e gestione conflitti delegata all'IDE):
+  revert, cherry-pick, reset (soft/mixed).
+
+Il *commit* resta affidato all'UI nativa dell'IDE (staging, hunk, amend).
+
 ## VS Code — `git-swimlanes-vscode-0.0.0.vsix`
 Richiede VS Code ≥ 1.85.
 
