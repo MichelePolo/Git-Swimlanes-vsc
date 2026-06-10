@@ -230,8 +230,10 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
         onEdt { notify("$label fallito: ${e.message}", NotificationType.WARNING) }
         return@runOnPooled
       }
-      refresh()
-      onEdt {
+      // Show the conflict dialog only AFTER refresh has pushed the conflicted state to the
+      // webview (the onDone callback fires inside refresh's EDT block) — parity with the
+      // awaited VS Code host, so the dialog never precedes the visible conflict files.
+      refresh {
         val abort = Messages.showYesNoDialog(
           project, "$label: conflitto. Annullare l'operazione? (No = risolvi nell'IDE)", "Conflitto",
           "Annulla operazione", "Risolvi nell'IDE", null,
