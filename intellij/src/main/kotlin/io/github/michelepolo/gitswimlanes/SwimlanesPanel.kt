@@ -172,6 +172,31 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
         if (proceed) runGitAction("Checkout") { git.switchRef(msg.target!!, msg.detach == true) }
       }
       "push" -> handlePush()
+      "revert" -> onEdt {
+        if (Messages.showOkCancelDialog(
+            project, "Revert del commit ${msg.hash!!.take(8)}? Creerà un commit che annulla le sue modifiche.",
+            "Revert", "Revert", "Annulla", null,
+          ) == Messages.OK) {
+          runMutation("Revert") { git.revert(msg.hash) }
+        }
+      }
+      "cherryPick" -> onEdt {
+        if (Messages.showOkCancelDialog(
+            project, "Cherry-pick del commit ${msg.hash!!.take(8)} sul branch corrente?",
+            "Cherry-pick", "Cherry-pick", "Annulla", null,
+          ) == Messages.OK) {
+          runMutation("Cherry-pick") { git.cherryPick(msg.hash) }
+        }
+      }
+      "resetTo" -> onEdt {
+        when (Messages.showDialog(
+          project, "Reset del branch corrente al commit ${msg.hash!!.take(8)}:", "Reset",
+          arrayOf("Soft (mantieni staged)", "Mixed (mantieni unstaged)", "Annulla"), 0, null,
+        )) {
+          0 -> runMutation("Reset") { git.resetTo(msg.hash!!, "soft") }
+          1 -> runMutation("Reset") { git.resetTo(msg.hash!!, "mixed") }
+        }
+      }
       "setViewConfig" -> {
         val cfg = msg.config ?: ViewConfigDto()
         ViewConfigStore.of(project).save(git.currentRootPath(), cfg.pinned, cfg.hidden)
@@ -192,6 +217,34 @@ class SwimlanesPanel(private val project: Project, parent: Disposable) {
       refresh { notify("$label completato.", NotificationType.INFORMATION) }
     } catch (e: Exception) {
       onEdt { notify("$label fallito: ${e.message}", NotificationType.WARNING) }
+    }
+  }
+
+  private fun runMutation(label: String, block: () -> Unit) = runOnPooled {
+    try {
+      block()
+      refresh { notify("$label completato. Stato precedente in git reflog (HEAD@{1}).", NotificationType.INFORMATION) }
+    } catch (e: Exception) {
+      val seq = git.sequencerState()
+      if (seq == null) {
+        onEdt { notify("$label fallito: ${e.message}", NotificationType.WARNING) }
+        return@runOnPooled
+      }
+      refresh()
+      onEdt {
+        val abort = Messages.showYesNoDialog(
+          project, "$label: conflitto. Annullare l'operazione? (No = risolvi nell'IDE)", "Conflitto",
+          "Annulla operazione", "Risolvi nell'IDE", null,
+        ) == Messages.YES
+        if (abort) runOnPooled {
+          try {
+            if (seq == "revert") git.revertAbort() else git.cherryPickAbort()
+            refresh { notify("Operazione annullata.", NotificationType.INFORMATION) }
+          } catch (e2: Exception) {
+            onEdt { notify("Annullamento fallito: ${e2.message}", NotificationType.WARNING) }
+          }
+        }
+      }
     }
   }
 

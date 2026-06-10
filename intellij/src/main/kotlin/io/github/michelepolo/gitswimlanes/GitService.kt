@@ -116,6 +116,46 @@ class GitService(private val project: Project) {
     if (tags) rawGit(listOf("push", remote, "--tags"))
   }
 
+  private fun assertHash(h: String) {
+    require(h.matches(Regex("^[0-9a-f]{4,40}$"))) { "hash non valido: $h" }
+  }
+
+  fun revert(hash: String) {
+    assertHash(hash)
+    rawGit(listOf("revert", "--no-edit", hash))
+  }
+
+  fun cherryPick(hash: String) {
+    assertHash(hash)
+    rawGit(listOf("cherry-pick", hash))
+  }
+
+  fun resetTo(hash: String, mode: String) {
+    assertHash(hash)
+    rawGit(listOf("reset", "--$mode", hash))
+  }
+
+  fun revertAbort() {
+    rawGit(listOf("revert", "--abort"))
+  }
+
+  fun cherryPickAbort() {
+    rawGit(listOf("cherry-pick", "--abort"))
+  }
+
+  /** Which sequencer (if any) is mid-operation, so the panel can offer Abort. */
+  fun sequencerState(): String? = when {
+    refExists("REVERT_HEAD") -> "revert"
+    refExists("CHERRY_PICK_HEAD") -> "cherryPick"
+    else -> null
+  }
+
+  private fun refExists(name: String): Boolean = try {
+    rawGit(listOf("rev-parse", "--verify", "--quiet", name)); true
+  } catch (e: Exception) {
+    false
+  }
+
   /** Fetch the forge's PR/MR refs so they appear as lanes (spec §7.2). Uses git's creds. */
   fun fetchPullRefs() {
     val remote = remoteName()
