@@ -235,4 +235,19 @@ describe("GitSwimlanes orchestrator (spec §6)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^push$/i }));
     expect(onPush).toHaveBeenCalledTimes(1);
   });
+
+  it("opens revert/cherry-pick/reset on the commit menu and fires callbacks", () => {
+    const onRevert = vi.fn();
+    const onCherryPick = vi.fn();
+    const onResetTo = vi.fn();
+    const { container } = render(
+      <GitSwimlanes commits={commitsT} onRevert={onRevert} onCherryPick={onCherryPick} onResetTo={onResetTo} />,
+    );
+    fireEvent.contextMenu(container.querySelector(".sw-rowpos")!); // first row = m1
+    expect(screen.getByText("Revert questo commit")).toBeInTheDocument();
+    expect(screen.getByText("Cherry-pick su HEAD")).toBeInTheDocument();
+    expect(screen.getByText("Reset HEAD a questo commit")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Revert questo commit"));
+    expect(onRevert).toHaveBeenCalledWith("m1");
+  });
 });

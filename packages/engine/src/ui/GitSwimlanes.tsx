@@ -58,6 +58,9 @@ export interface GitSwimlanesProps {
   onDeleteTag?(name: string): void;
   onCheckout?(target: string, detach: boolean): void;
   onPush?(): void;
+  onRevert?(hash: string): void;
+  onCherryPick?(hash: string): void;
+  onResetTo?(hash: string): void;
 }
 
 const EMPTY_VIEW_CONFIG: ViewConfig = { pinned: [], hidden: [] };
@@ -104,6 +107,9 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     onDeleteTag,
     onCheckout,
     onPush,
+    onRevert,
+    onCherryPick,
+    onResetTo,
   } = props;
   const opts = { ...DEFAULTS, ...options };
 
@@ -129,6 +135,14 @@ export function GitSwimlanes(props: GitSwimlanesProps): JSX.Element {
     if (onCreateTag) items.push({ label: "Crea tag qui", onSelect: () => onCreateTag(c.hash) });
     if (onCheckout) items.push({ label: "Checkout questo commit", onSelect: () => onCheckout(c.hash, true) });
     if (onDeleteTag) for (const t of c.tags) items.push({ label: `Elimina tag "${t}"`, onSelect: () => onDeleteTag(t), danger: true });
+    const mut: MenuItem[] = [];
+    if (onRevert) mut.push({ label: "Revert questo commit", onSelect: () => onRevert(c.hash) });
+    if (onCherryPick) mut.push({ label: "Cherry-pick su HEAD", onSelect: () => onCherryPick(c.hash) });
+    if (onResetTo) mut.push({ label: "Reset HEAD a questo commit", onSelect: () => onResetTo(c.hash) });
+    if (mut.length) {
+      if (items.length) mut[0].separator = true; // divider only when ref ops sit above
+      items.push(...mut);
+    }
     if (!items.length) return;
     e.preventDefault();
     setMenu({ x: e.clientX, y: e.clientY, items });
