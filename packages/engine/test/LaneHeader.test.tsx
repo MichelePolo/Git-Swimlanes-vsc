@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, fireEvent, cleanup } from "@testing-library/react";
+import type { LaneModel } from "@michelepolo/git-swimlanes-contract";
 import { parseLog } from "../src/model/parseLog.js";
 import { assignLanes } from "../src/model/assignLanes.js";
 import { laneX } from "../src/layout.js";
@@ -55,5 +56,18 @@ describe("LaneHeader (spec §1 — persistent lane labels)", () => {
   it("draws a tick per lane too", () => {
     const { container } = render(<LaneHeader model={model()} />);
     expect(container.querySelectorAll(".lane-tick")).toHaveLength(model().laneNames.length);
+  });
+});
+
+const simpleModel = { laneNames: ["main", "feature"], graphW: 120 } as unknown as LaneModel;
+
+describe("LaneHeader context-menu hook", () => {
+  it("calls onLaneContextMenu with the lane name on right-click", () => {
+    const onLaneContextMenu = vi.fn();
+    const { container } = render(<LaneHeader model={simpleModel} onLaneContextMenu={onLaneContextMenu} />);
+    const label = container.querySelector('.lane-label[data-lane-label="feature"]');
+    fireEvent.contextMenu(label!);
+    expect(onLaneContextMenu).toHaveBeenCalledTimes(1);
+    expect(onLaneContextMenu.mock.calls[0][0]).toBe("feature");
   });
 });
