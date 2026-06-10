@@ -122,7 +122,10 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         const name = await vscode.window.showInputBox({
           prompt: `Nuovo branch dal commit ${msg.hash.slice(0, 8)}`,
           placeHolder: "nome-branch",
-          validateInput: (v) => (v.trim() && !/\s/.test(v.trim()) ? null : "Nome non valido"),
+          validateInput: (v) => {
+            const t = v.trim();
+            return t && !t.startsWith("-") && !/\s/.test(t) ? null : "Nome non valido";
+          },
         });
         if (name?.trim()) await this.runGitAction("Crea branch", () => this.git.createBranch(name.trim(), msg.hash));
         break;
@@ -131,7 +134,10 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
         const name = await vscode.window.showInputBox({
           prompt: `Nuovo tag dal commit ${msg.hash.slice(0, 8)}`,
           placeHolder: "nome-tag",
-          validateInput: (v) => (v.trim() && !/\s/.test(v.trim()) ? null : "Nome non valido"),
+          validateInput: (v) => {
+            const t = v.trim();
+            return t && !t.startsWith("-") && !/\s/.test(t) ? null : "Nome non valido";
+          },
         });
         if (name?.trim()) await this.runGitAction("Crea tag", () => this.git.createTag(name.trim(), msg.hash));
         break;

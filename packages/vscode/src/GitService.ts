@@ -79,24 +79,40 @@ export class GitService {
     return stdout;
   }
 
+  /**
+   * Reject a ref/name that begins with `-` so it can never be smuggled in as a git flag
+   * (argument injection). Combined with the `--` end-of-options separator on every call,
+   * webview/user-supplied names are always treated as positional arguments.
+   */
+  private static assertSafeRef(v: string): void {
+    if (v.startsWith("-")) throw new Error(`Argomento git non valido: ${v}`);
+  }
+
   async createBranch(name: string, hash: string): Promise<void> {
-    await run("git", ["branch", name, hash], { cwd: this.cwd });
+    GitService.assertSafeRef(name);
+    GitService.assertSafeRef(hash);
+    await run("git", ["branch", "--", name, hash], { cwd: this.cwd });
   }
 
   async createTag(name: string, hash: string): Promise<void> {
-    await run("git", ["tag", name, hash], { cwd: this.cwd });
+    GitService.assertSafeRef(name);
+    GitService.assertSafeRef(hash);
+    await run("git", ["tag", "--", name, hash], { cwd: this.cwd });
   }
 
   async deleteBranch(name: string): Promise<void> {
-    await run("git", ["branch", "-d", name], { cwd: this.cwd });
+    GitService.assertSafeRef(name);
+    await run("git", ["branch", "-d", "--", name], { cwd: this.cwd });
   }
 
   async deleteTag(name: string): Promise<void> {
-    await run("git", ["tag", "-d", name], { cwd: this.cwd });
+    GitService.assertSafeRef(name);
+    await run("git", ["tag", "-d", "--", name], { cwd: this.cwd });
   }
 
   async switchRef(target: string, detach: boolean): Promise<void> {
-    const args = detach ? ["switch", "--detach", target] : ["switch", target];
+    GitService.assertSafeRef(target);
+    const args = detach ? ["switch", "--detach", "--", target] : ["switch", "--", target];
     await run("git", args, { cwd: this.cwd });
   }
 

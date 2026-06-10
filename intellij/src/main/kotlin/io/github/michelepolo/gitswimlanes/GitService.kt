@@ -63,24 +63,40 @@ class GitService(private val project: Project) {
 
   fun status(): String = rawGit(listOf("-c", "core.quotepath=false", "status", "--porcelain"))
 
+  /**
+   * Reject a ref/name beginning with `-` so it can never be smuggled in as a git flag
+   * (argument injection). Combined with the `--` end-of-options separator on every call,
+   * webview/user-supplied names are always treated as positional arguments.
+   */
+  private fun assertSafeRef(v: String) {
+    require(!v.startsWith("-")) { "Argomento git non valido: $v" }
+  }
+
   fun createBranch(name: String, hash: String) {
-    rawGit(listOf("branch", name, hash))
+    assertSafeRef(name)
+    assertSafeRef(hash)
+    rawGit(listOf("branch", "--", name, hash))
   }
 
   fun createTag(name: String, hash: String) {
-    rawGit(listOf("tag", name, hash))
+    assertSafeRef(name)
+    assertSafeRef(hash)
+    rawGit(listOf("tag", "--", name, hash))
   }
 
   fun deleteBranch(name: String) {
-    rawGit(listOf("branch", "-d", name))
+    assertSafeRef(name)
+    rawGit(listOf("branch", "-d", "--", name))
   }
 
   fun deleteTag(name: String) {
-    rawGit(listOf("tag", "-d", name))
+    assertSafeRef(name)
+    rawGit(listOf("tag", "-d", "--", name))
   }
 
   fun switchRef(target: String, detach: Boolean) {
-    rawGit(if (detach) listOf("switch", "--detach", target) else listOf("switch", target))
+    assertSafeRef(target)
+    rawGit(if (detach) listOf("switch", "--detach", "--", target) else listOf("switch", "--", target))
   }
 
   data class BranchInfo(val branch: String, val hasUpstream: Boolean, val remote: String)
