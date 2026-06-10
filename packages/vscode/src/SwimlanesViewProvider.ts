@@ -118,7 +118,73 @@ export class SwimlanesViewProvider implements vscode.WebviewViewProvider {
       case "fetch":
         await this.runGitAction("Fetch", () => this.git.fetch());
         break;
+      case "createBranch": {
+        const name = await vscode.window.showInputBox({
+          prompt: `Nuovo branch dal commit ${msg.hash.slice(0, 8)}`,
+          placeHolder: "nome-branch",
+          validateInput: (v) => (v.trim() && !/\s/.test(v.trim()) ? null : "Nome non valido"),
+        });
+        if (name?.trim()) await this.runGitAction("Crea branch", () => this.git.createBranch(name.trim(), msg.hash));
+        break;
+      }
+      case "createTag": {
+        const name = await vscode.window.showInputBox({
+          prompt: `Nuovo tag dal commit ${msg.hash.slice(0, 8)}`,
+          placeHolder: "nome-tag",
+          validateInput: (v) => (v.trim() && !/\s/.test(v.trim()) ? null : "Nome non valido"),
+        });
+        if (name?.trim()) await this.runGitAction("Crea tag", () => this.git.createTag(name.trim(), msg.hash));
+        break;
+      }
+      case "deleteBranch": {
+        const ok = await vscode.window.showWarningMessage(`Eliminare il branch "${msg.name}"?`, { modal: true }, "Elimina");
+        if (ok === "Elimina") await this.runGitAction("Elimina branch", () => this.git.deleteBranch(msg.name));
+        break;
+      }
+      case "deleteTag": {
+        const ok = await vscode.window.showWarningMessage(`Eliminare il tag "${msg.name}"?`, { modal: true }, "Elimina");
+        if (ok === "Elimina") await this.runGitAction("Elimina tag", () => this.git.deleteTag(msg.name));
+        break;
+      }
+      case "checkout": {
+        if (msg.detach) {
+          const ok = await vscode.window.showWarningMessage(
+            `Checkout del commit ${msg.target.slice(0, 8)} — passerai a HEAD detached.`,
+            { modal: true },
+            "Continua",
+          );
+          if (ok !== "Continua") break;
+        }
+        await this.runGitAction("Checkout", () => this.git.switchRef(msg.target, msg.detach));
+        break;
+      }
+      case "push":
+        await this.handlePush();
+        break;
     }
+  }
+
+  private async handlePush(): Promise<void> {
+    let info: { branch: string; hasUpstream: boolean; remote: string };
+    try {
+      info = await this.git.currentBranchInfo();
+    } catch (e) {
+      void vscode.window.showWarningMessage(`Git Swimlanes: Push non disponibile — ${String(e)}`);
+      return;
+    }
+    if (info.branch === "HEAD") {
+      void vscode.window.showWarningMessage("Git Swimlanes: HEAD detached, nessun branch da pushare.");
+      return;
+    }
+    const label = info.hasUpstream
+      ? `Push del branch "${info.branch}"?`
+      : `Push di "${info.branch}" e imposta upstream?`;
+    const choice = await vscode.window.showWarningMessage(label, { modal: true }, "Push", "Push + tag");
+    if (choice !== "Push" && choice !== "Push + tag") return;
+    const tags = choice === "Push + tag";
+    await this.runGitAction("Push", () =>
+      this.git.push({ setUpstream: !info.hasUpstream, remote: info.remote, branch: info.branch, tags }),
+    );
   }
 
   private async runGitAction(label: string, fn: () => Promise<void>): Promise<void> {
